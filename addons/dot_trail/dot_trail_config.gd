@@ -1,7 +1,7 @@
-class_name DotTrailConfig
-extends DotConfig
+class_name GSTrailConfig
+extends GSConfig
 
-## The trail cvars. Layered like every DotConfig: defaults, JSON file, environment (DOT_TRAIL_*), command line (--trail-*).
+## The trail cvars. Layered like every GSConfig: defaults, JSON file, environment (DOT_TRAIL_*), command line (--trail-*).
 
 @export var enabled: bool = true
 ## Metres a wearer must move before a ribbon point is added.
@@ -23,7 +23,7 @@ extends DotConfig
 @export var max_lifetime: float = 5.0
 ## Emitters farther than this from the camera stop building a mesh. 0 is never.
 @export var cull_distance: float = 60.0
-## The pack this server advertises as `sv_trail_pack`, "<content id>@<version>" (see [method DotTrailClient.advertise]). Empty advertises none.
+## The pack this server advertises as `sv_trail_pack`, "<content id>@<version>" (see [method GSTrailClient.advertise]). Empty advertises none.
 @export var pack: String = ""
 
 
@@ -35,18 +35,18 @@ func cli_prefix() -> String:
 	return "--trail-"
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if min_step <= 0.0:
-		return DotResult.fail(DotError.CODE_INVALID, "trail config: min_step must be positive")
+		return GSResult.fail(GSError.CODE_INVALID, "trail config: min_step must be positive")
 	if max_points < 0 or max_points == 1:
-		return DotResult.fail(DotError.CODE_INVALID, "trail config: max_points must be 0 (unlimited) or at least 2")
+		return GSResult.fail(GSError.CODE_INVALID, "trail config: max_points must be 0 (unlimited) or at least 2")
 	if max_trails < 0 or max_upload_bytes < 0 or max_dimension < 0 or max_width < 0.0 or max_lifetime < 0.0:
-		return DotResult.fail(DotError.CODE_INVALID, "trail config: max_trails, max_upload_bytes, max_dimension, max_width and max_lifetime must be 0 (unlimited) or more")
+		return GSResult.fail(GSError.CODE_INVALID, "trail config: max_trails, max_upload_bytes, max_dimension, max_width and max_lifetime must be 0 (unlimited) or more")
 	if equip_cooldown < 0.0:
-		return DotResult.fail(DotError.CODE_INVALID, "trail config: equip_cooldown must not be negative")
+		return GSResult.fail(GSError.CODE_INVALID, "trail config: equip_cooldown must not be negative")
 	if not pack.strip_edges().is_empty() and pack_parts().is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "trail config: pack must be <content id>@<version>")
-	return DotResult.success(null)
+		return GSResult.fail(GSError.CODE_INVALID, "trail config: pack must be <content id>@<version>")
+	return GSResult.success(null)
 
 
 func limits() -> Dictionary:

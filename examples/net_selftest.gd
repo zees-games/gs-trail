@@ -1,6 +1,6 @@
 extends Node
 
-## Player trails over dot-net: the relay checks a request with DotTrailEquip and tells everyone, a refused request is answered with the id still worn, a late joiner hears who wears what, the client draws one emitter per wearer, and the pre-join hook fetches the pack. Needs dot-trail linked into addons/.
+## Player trails over dot-net: the relay checks a request with GSTrailEquip and tells everyone, a refused request is answered with the id still worn, a late joiner hears who wears what, the client draws one emitter per wearer, and the pre-join hook fetches the pack. Needs dot-trail linked into addons/.
 
 const CHECKS := 24
 
@@ -10,7 +10,7 @@ var _failures := PackedStringArray()
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.FATAL)
+	GSLog.set_level(GSLog.Level.FATAL)
 	_run.call_deferred()
 
 
@@ -28,38 +28,38 @@ func _png() -> PackedByteArray:
 	return img.save_png_to_buffer()
 
 
-func _net(server: bool) -> DotNetManager:
-	var n := DotNetManager.new()
+func _net(server: bool) -> GSNetManager:
+	var n := GSNetManager.new()
 	n.is_server = server
 	n.config_file = ""
 	var _s := n.setup()
-	var _r := DotTrailMessage.register(n)
+	var _r := GSTrailMessage.register(n)
 	n.messages.seal()
 	return n
 
 
-func _decode(net: DotNetManager, payload: PackedByteArray) -> DotTrailMessage:
-	var read := net.messages.decode(DotNetReader.new(payload), 1, false)
-	return read.value as DotTrailMessage if read.ok else null
+func _decode(net: GSNetManager, payload: PackedByteArray) -> GSTrailMessage:
+	var read := net.messages.decode(GSNetReader.new(payload), 1, false)
+	return read.value as GSTrailMessage if read.ok else null
 
 
-func _ask(net: DotNetManager, peer: int, id: String) -> void:
-	var m := DotTrailMessage.new()
+func _ask(net: GSNetManager, peer: int, id: String) -> void:
+	var m := GSTrailMessage.new()
 	m.sender_peer_id = peer
 	m.id = id
 	net.messages.dispatch(m)
 
 
-func _test_relay(registry: DotTrailRegistry) -> void:
-	var equip := DotTrailEquip.new(registry)
+func _test_relay(registry: GSTrailRegistry) -> void:
+	var equip := GSTrailEquip.new(registry)
 	var server := _net(true)
 	add_child(server)
 	var sent := []
 	server.send_fn = func(peer: int, payload: PackedByteArray, _d: int) -> void: sent.append([peer, payload])
 	var groups := {7: PackedStringArray()}
-	var served := DotTrailRelay.serve(server, equip, func(p: int) -> PackedStringArray: return groups.get(p, PackedStringArray()))
-	_check(served.ok and DotTrailRelay.of(server) == served.value, "the relay serves and is found on the net")
-	var relay: DotTrailRelay = served.value
+	var served := GSTrailRelay.serve(server, equip, func(p: int) -> PackedStringArray: return groups.get(p, PackedStringArray()))
+	_check(served.ok and GSTrailRelay.of(server) == served.value, "the relay serves and is found on the net")
+	var relay: GSTrailRelay = served.value
 	relay.add_peer(7)
 	_ask(server, 7, "spark")
 	var told := _decode(server, sent[0][1]) if sent.size() == 1 else null
@@ -95,34 +95,34 @@ func _test_relay(registry: DotTrailRegistry) -> void:
 	sent.clear()
 	relay.remove_peer(7)
 	_check(equip.worn(7) == "" and sent.size() == 1 and _decode(server, sent[0][1]).actor == 7 and _decode(server, sent[0][1]).id == "", "leaving drops the record and tells everyone")
-	var bad := DotTrailMessage.new()
+	var bad := GSTrailMessage.new()
 	bad.id = "Bad Id"
 	_check(not bad.validate().ok, "a message id outside a-z, 0-9, _ is refused")
 	bad.id = "x".repeat(33)
 	_check(not bad.validate().ok, "an over-long id is refused")
 
 
-func _test_cooldown(registry: DotTrailRegistry) -> void:
-	var cooled := DotTrailRegistry.new()
+func _test_cooldown(registry: GSTrailRegistry) -> void:
+	var cooled := GSTrailRegistry.new()
 	cooled.config.equip_cooldown = 1.0
 	var _c := cooled.add(registry.get_def("spark"), _png())
 	var clock := [0]
-	var slow := DotTrailEquip.new(cooled)
+	var slow := GSTrailEquip.new(cooled)
 	slow.now_ms = func() -> int: return clock[0]
 	var server2 := _net(true)
 	add_child(server2)
 	var sent2 := []
 	server2.send_fn = func(peer: int, payload: PackedByteArray, _d: int) -> void: sent2.append([peer, payload])
-	var _s2 := DotTrailRelay.serve(server2, slow)
+	var _s2 := GSTrailRelay.serve(server2, slow)
 	_ask(server2, 5, "spark")
 	_ask(server2, 5, "")
 	_check(slow.worn(5) == "spark", "the equip cooldown applies through the relay")
 
 
-func _test_client(registry: DotTrailRegistry) -> void:
+func _test_client(registry: GSTrailRegistry) -> void:
 	var client := _net(false)
 	add_child(client)
-	var tc := DotTrailClient.new()
+	var tc := GSTrailClient.new()
 	var figures := {7: Node3D.new(), 9: Node3D.new()}
 	for f: Node in figures.values():
 		add_child(f)
@@ -131,20 +131,20 @@ func _test_client(registry: DotTrailRegistry) -> void:
 	tc.changed.connect(func(a: int, i: String) -> void: seen.append([a, i]))
 	var _att := tc.attach(client, registry)
 	var wire := func(actor: int, id: String) -> void:
-		var m := DotTrailMessage.new()
+		var m := GSTrailMessage.new()
 		m.actor = actor
 		m.id = id
 		client.messages.dispatch(m)
 	wire.call(7, "spark")
-	var emitters := (figures[7] as Node3D).get_children().filter(func(n: Node) -> bool: return n is DotTrailEmitter)
-	_check(emitters.size() == 1 and (emitters[0] as DotTrailEmitter).def.id == "spark" and seen == [[7, "spark"]], "the client puts an emitter on the wearer's figure")
+	var emitters := (figures[7] as Node3D).get_children().filter(func(n: Node) -> bool: return n is GSTrailEmitter)
+	_check(emitters.size() == 1 and (emitters[0] as GSTrailEmitter).def.id == "spark" and seen == [[7, "spark"]], "the client puts an emitter on the wearer's figure")
 	wire.call(7, "gold")
 	await get_tree().process_frame
-	emitters = (figures[7] as Node3D).get_children().filter(func(n: Node) -> bool: return n is DotTrailEmitter and not n.is_queued_for_deletion())
-	_check(emitters.size() == 1 and (emitters[0] as DotTrailEmitter).def.id == "gold", "a change replaces the emitter, never stacks a second")
+	emitters = (figures[7] as Node3D).get_children().filter(func(n: Node) -> bool: return n is GSTrailEmitter and not n.is_queued_for_deletion())
+	_check(emitters.size() == 1 and (emitters[0] as GSTrailEmitter).def.id == "gold", "a change replaces the emitter, never stacks a second")
 	wire.call(7, "")
 	await get_tree().process_frame
-	_check((figures[7] as Node3D).get_children().filter(func(n: Node) -> bool: return n is DotTrailEmitter).is_empty() and not tc.worn.has(7), "an empty id removes it")
+	_check((figures[7] as Node3D).get_children().filter(func(n: Node) -> bool: return n is GSTrailEmitter).is_empty() and not tc.worn.has(7), "an empty id removes it")
 	wire.call(9, "not_in_the_pack")
 	_check((figures[9] as Node3D).get_children().is_empty(), "an id the pack does not hold draws nothing")
 	wire.call(9, "spark")
@@ -155,27 +155,27 @@ func _test_client(registry: DotTrailRegistry) -> void:
 	tc.refresh()
 	_check((figures[9] as Node3D).get_children().size() == 1, "refresh draws a figure that spawned after the message")
 	_check(tc.request("spark").ok or true, "request is callable")
-	_check(DotTrailClient.pack_from_rules({"sv_trail_pack": "trails-x@1.0.0"}) == PackedStringArray(["trails-x", "1.0.0"]), "the pack is read from the server's rule")
-	_check(DotTrailClient.pack_from_rules({"sv_trail_pack": "junk"}).is_empty() and DotTrailClient.pack_from_rules({}).is_empty(), "a missing or malformed rule is no pack")
+	_check(GSTrailClient.pack_from_rules({"sv_trail_pack": "trails-x@1.0.0"}) == PackedStringArray(["trails-x", "1.0.0"]), "the pack is read from the server's rule")
+	_check(GSTrailClient.pack_from_rules({"sv_trail_pack": "junk"}).is_empty() and GSTrailClient.pack_from_rules({}).is_empty(), "a missing or malformed rule is no pack")
 
 
 func _test_prejoin() -> void:
-	var pre := DotGamePrejoin.new()
+	var pre := GSGamePrejoin.new()
 	var calls := []
 	pre.rules_fn = func(_a: String) -> Dictionary: return {"sv_trail_pack": "trails-x@1.0.0"}
-	pre.extra_steps.append(func(rules: Dictionary) -> DotResult:
+	pre.extra_steps.append(func(rules: Dictionary) -> GSResult:
 		calls.append(rules)
-		return DotResult.fail(DotError.CODE_NETWORK, "cdn down"))
-	var joined: DotResult = await pre.prepare(self, "127.0.0.1:27015")
+		return GSResult.fail(GSError.CODE_NETWORK, "cdn down"))
+	var joined: GSResult = await pre.prepare(self, "127.0.0.1:27015")
 	_check(calls.size() == 1 and calls[0].has("sv_trail_pack") and joined.ok, "prejoin fetches the trail pack and a failure never blocks the join")
 
 
 func _run() -> void:
 	print("dot-trail: net")
-	var registry := DotTrailRegistry.new()
+	var registry := GSTrailRegistry.new()
 	registry.config.equip_cooldown = 0.0
 	for spec: Array in [["spark", "public", []], ["gold", "groups", ["donator"]]]:
-		var d: DotTrailDef = DotTrailDef.from_dict({"id": spec[0], "image": spec[0] + ".png", "access": spec[1], "groups": spec[2]}).value
+		var d: GSTrailDef = GSTrailDef.from_dict({"id": spec[0], "image": spec[0] + ".png", "access": spec[1], "groups": spec[2]}).value
 		var _a := registry.add(d, _png())
 	_test_relay(registry)
 	_test_cooldown(registry)

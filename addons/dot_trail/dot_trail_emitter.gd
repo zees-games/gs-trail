@@ -1,17 +1,17 @@
-class_name DotTrailEmitter
+class_name GSTrailEmitter
 extends Node3D
 
-## Follows a node and keeps a ribbon of where it has been. Place it anywhere; the target comes from a DotNodeRef.
+## Follows a node and keeps a ribbon of where it has been. Place it anywhere; the target comes from a GSNodeRef.
 
 const CHANNEL := "trail"
 
 ## The node to follow, resolved against this emitter. Default: the parent.
-@export var target: DotNodeRef
+@export var target: GSNodeRef
 ## Height above the node's origin (the feet) the ribbon is drawn at.
 @export var lift := 0.9
-var config: DotTrailConfig = DotTrailConfig.new()
-var def: DotTrailDef
-var registry: DotTrailRegistry
+var config: GSTrailConfig = GSTrailConfig.new()
+var def: GSTrailDef
+var registry: GSTrailRegistry
 
 var _points := PackedVector3Array()
 var _times := PackedFloat64Array()
@@ -28,13 +28,13 @@ func _ready() -> void:
 	top_level = true
 	global_transform = Transform3D.IDENTITY
 	if target == null:
-		target = DotNodeRef.new()
-		target.mode = DotNodeRef.Mode.PARENT
+		target = GSNodeRef.new()
+		target.mode = GSNodeRef.Mode.PARENT
 	var res := target.resolve(self)
 	if res.ok and res.value is Node3D:
 		_target = res.value
 	else:
-		DotLog.warn(CHANNEL, "emitter has no 3D target", {"path": str(get_path())})
+		GSLog.warn(CHANNEL, "emitter has no 3D target", {"path": str(get_path())})
 	if DisplayServer.get_name() != "headless":
 		_mesh = ImmediateMesh.new()
 		_mesh_node = MeshInstance3D.new()
@@ -44,7 +44,7 @@ func _ready() -> void:
 
 
 ## Chooses what is drawn. A null def clears the ribbon.
-func set_trail(p_def: DotTrailDef) -> void:
+func set_trail(p_def: GSTrailDef) -> void:
 	def = p_def
 	if def == null:
 		clear()
@@ -109,7 +109,7 @@ func _rebuild() -> void:
 	var lifted := PackedVector3Array()
 	for p in _points:
 		lifted.append(p + Vector3.UP * lift)
-	var s := DotTrailRibbon.strip(lifted, ages, def.width if config.max_width <= 0.0 else minf(def.width, config.max_width), def.lifetime, cam.global_position if cam != null else Vector3.INF)
+	var s := GSTrailRibbon.strip(lifted, ages, def.width if config.max_width <= 0.0 else minf(def.width, config.max_width), def.lifetime, cam.global_position if cam != null else Vector3.INF)
 	_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
 	for i in s["vertices"].size():
 		var a: float = s["alphas"][i]
@@ -140,4 +140,4 @@ func _material() -> StandardMaterial3D:
 
 
 func describe() -> String:
-	return "DotTrailEmitter: %s, %d points, target %s" % [def.id if def != null else "none", _points.size(), str(_target.get_path()) if _target != null and _target.is_inside_tree() else "none"]
+	return "GSTrailEmitter: %s, %d points, target %s" % [def.id if def != null else "none", _points.size(), str(_target.get_path()) if _target != null and _target.is_inside_tree() else "none"]

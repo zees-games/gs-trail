@@ -1,4 +1,4 @@
-class_name DotTrailKit
+class_name GSTrailKit
 extends RefCounted
 
 ## The menu kit's pieces with a plain fallback, so the trail screens use dot-menu's look when it is there and still draw without it.

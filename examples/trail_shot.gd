@@ -5,8 +5,8 @@ extends Node3D
 var _shot := ""
 var _t := 0.0
 var _runner: Node3D
-var _emitters: Array[DotTrailEmitter] = []
-var _registry := DotTrailRegistry.new()
+var _emitters: Array[GSTrailEmitter] = []
+var _registry := GSTrailRegistry.new()
 var _done := false
 
 
@@ -38,12 +38,12 @@ func _ready() -> void:
 	var specs := [["comet", Color(1, 0.75, 0.3), "add", 0.9], ["ribbon", Color(0.4, 0.8, 1.0), "mix", 0.6]]
 	for k in specs.size():
 		var png := _streak_png(specs[k][0] == "comet")
-		var def: DotTrailDef = DotTrailDef.from_dict({"id": specs[k][0], "image": specs[k][0] + ".png", "width": specs[k][3], "lifetime": 2.0,
+		var def: GSTrailDef = GSTrailDef.from_dict({"id": specs[k][0], "image": specs[k][0] + ".png", "width": specs[k][3], "lifetime": 2.0,
 			"color": "#" + (specs[k][1] as Color).to_html(false), "blend": specs[k][2]}).value
 		var added := _registry.add(def, png)
 		if not added.ok:
 			push_error("trail not added: " + str(added.error))
-		var e := DotTrailEmitter.new()
+		var e := GSTrailEmitter.new()
 		e.registry = _registry
 		_runner.add_child(e)
 		e.set_trail(def)

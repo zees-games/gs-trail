@@ -1,6 +1,6 @@
 extends Node
 
-## Exercises the trail form's server side ([DotTrailWorkbench]) and its HTTP routes. Needs dot-workbench linked into addons/.
+## Exercises the trail form's server side ([GSTrailWorkbench]) and its HTTP routes. Needs dot-workbench linked into addons/.
 
 const SECTIONS := 3
 const CHECKS := 26
@@ -12,7 +12,7 @@ var _section_count := 0
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.FATAL)
+	GSLog.set_level(GSLog.Level.FATAL)
 	_line("dot-trail workbench self-test")
 	_test_ops()
 	_test_http()
@@ -38,18 +38,18 @@ func _meta(id: String) -> Dictionary:
 
 func _make() -> Array:
 	DirAccess.remove_absolute(BASE.path_join("trails.json"))
-	var api := DotWorkbenchApi.new()
+	var api := GSWorkbenchApi.new()
 	api.set_admin_token("s3cret")
 	api.permit = func(actor: Variant, flag: String) -> bool: return actor == "owner" and flag == "trail"
-	var store := DotTrailStore.new(null, BASE)
-	return [api, store, DotTrailWorkbench.new(api, store)]
+	var store := GSTrailStore.new(null, BASE)
+	return [api, store, GSTrailWorkbench.new(api, store)]
 
 
 func _test_ops() -> void:
 	_section("ops")
 	var m := _make()
-	var t: DotTrailWorkbench = m[2]
-	var store: DotTrailStore = m[1]
+	var t: GSTrailWorkbench = m[2]
+	var store: GSTrailStore = m[1]
 	var calls := [0]
 	t.changed = func() -> void: calls[0] += 1
 	var up := t.handle("owner", {"op": "trail_upload", "meta": _meta("spark"), "image": _png(16), "file": "spark.png"})
@@ -74,7 +74,7 @@ func _test_ops() -> void:
 	_check(t.handle("owner", {"op": "trail_upload", "meta": _meta("fat"), "image": fat}).code() == "quota", "an oversized body is refused before decoding")
 	_check(store.registry.count() == 2, "refused uploads add nothing")
 	_check(t.handle("owner", {"op": "trail_delete", "id": "gold"}).ok and store.registry.count() == 1, "delete removes it")
-	var back := DotTrailStore.new(null, BASE)
+	var back := GSTrailStore.new(null, BASE)
 	_check(back.load_dir().ok and back.registry.count() == 1 and back.registry.get_def("spark") != null, "the saved store reloads")
 	_check(t.handle("owner", {"op": "trail_delete", "id": "nope"}).code() == "invalid", "deleting an unknown id is invalid")
 	_check(t.handle("owner", {"op": "frobnicate"}).code() == "invalid", "an unknown op is invalid")
@@ -82,14 +82,14 @@ func _test_ops() -> void:
 
 func _test_http() -> void:
 	_section("HTTP routes")
-	if not DotPlatform.can_listen():
+	if not GSPlatform.can_listen():
 		_line("  skipped: this platform cannot listen on a socket")
 		for i in 6:
 			_check(true, "skipped (no sockets)")
 		return
 	var m := _make()
-	var h := DotWorkbenchHttp.new(m[0])
-	(m[2] as DotTrailWorkbench).mount(h)
+	var h := GSWorkbenchHttp.new(m[0])
+	(m[2] as GSTrailWorkbench).mount(h)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(BASE))
 	var f := FileAccess.open(BASE.path_join("t.token"), FileAccess.WRITE)
 	f.store_string("s3cret")
@@ -103,25 +103,25 @@ func _test_http() -> void:
 	_check(_http_call(h, "GET", "/api/trails", "")["status"] == 401, "no token is 401")
 	var body := JSON.stringify({"meta": _meta("beam"), "image": _png(16), "file": "beam.png"})
 	var up := _http_call(h, "POST", "/api/trails", "s3cret", body)
-	_check(up["status"] == 200 and (m[1] as DotTrailStore).registry.count() == 1, "POST uploads a trail")
+	_check(up["status"] == 200 and (m[1] as GSTrailStore).registry.count() == 1, "POST uploads a trail")
 	_check(_http_call(h, "GET", "/api/trails")["json"]["value"]["trails"].size() == 1, "GET lists it")
 	_check(_http_call(h, "POST", "/api/trails", "s3cret", "{nope")["status"] == 400, "a malformed body is 400")
-	_check(_http_call(h, "DELETE", "/api/trails/beam")["status"] == 200 and (m[1] as DotTrailStore).registry.count() == 0, "DELETE removes it")
+	_check(_http_call(h, "DELETE", "/api/trails/beam")["status"] == 200 and (m[1] as GSTrailStore).registry.count() == 0, "DELETE removes it")
 	h.stop()
 
 
 func _test_permission() -> void:
 	_section("permission")
 	var m := _make()
-	var t: DotTrailWorkbench = m[2]
+	var t: GSTrailWorkbench = m[2]
 	var up := {"op": "trail_upload", "meta": _meta("a"), "image": _png(16)}
 	_check(t.handle("stranger", up).code() == "forbidden", "an actor without the trail flag is refused")
 	_check(t.handle("stranger", {"op": "trail_list"}).code() == "forbidden", "listing needs the flag too")
-	_check(t.handle(DotWorkbenchApi.TOKEN_ACTOR, up).ok, "the admin token holds the trail flag")
-	_check((m[1] as DotTrailStore).registry.count() == 1, "only the permitted upload landed")
+	_check(t.handle(GSWorkbenchApi.TOKEN_ACTOR, up).ok, "the admin token holds the trail flag")
+	_check((m[1] as GSTrailStore).registry.count() == 1, "only the permitted upload landed")
 
 
-func _http_call(h: DotWorkbenchHttp, method: String, path: String, token: String = "s3cret", body: String = "") -> Dictionary:
+func _http_call(h: GSWorkbenchHttp, method: String, path: String, token: String = "s3cret", body: String = "") -> Dictionary:
 	var head := "%s %s HTTP/1.1\r\nHost: x\r\nContent-Length: %d\r\n" % [method, path, body.to_utf8_buffer().size()]
 	if token != "":
 		head += "Authorization: Bearer %s\r\n" % token

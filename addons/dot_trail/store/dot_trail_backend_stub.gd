@@ -1,5 +1,5 @@
-class_name DotTrailBackendStub
-extends DotTrailBackend
+class_name GSTrailBackendStub
+extends GSTrailBackend
 
 ## An in-memory store with the site's contract: a points balance, prices, purchases, uploads queued for moderation. Persists to [member save_path] when set (flushing the web filesystem).
 
@@ -16,19 +16,19 @@ var _tree: SceneTree = null
 
 
 ## Prices from a registry's defs (their `price`), the rest of the contract in memory.
-static func from_registry(registry: DotTrailRegistry, p_points: int = 1000, tree: SceneTree = null) -> DotTrailBackendStub:
-	var b := DotTrailBackendStub.new()
+static func from_registry(registry: GSTrailRegistry, p_points: int = 1000, tree: SceneTree = null) -> GSTrailBackendStub:
+	var b := GSTrailBackendStub.new()
 	b.points = p_points
 	b._tree = tree
 	if registry != null:
 		for id in registry.ids():
 			var def := registry.get_def(id)
-			b.prices[id] = {"title": def.title, "price_points": int(def.price), "public": def.access == DotTrailDef.ACCESS_PUBLIC}
+			b.prices[id] = {"title": def.title, "price_points": int(def.price), "public": def.access == GSTrailDef.ACCESS_PUBLIC}
 	b.load_state()
 	return b
 
 
-func catalog() -> DotResult:
+func catalog() -> GSResult:
 	await _wait()
 	var rows: Array = []
 	for id: String in prices:
@@ -36,47 +36,47 @@ func catalog() -> DotResult:
 		var free: bool = p == 0 and bool(prices[id].get("public", true))
 		rows.append({"id": id, "title": str(prices[id]["title"]), "price_points": p, "free": free,
 			"owned": owned.has(id) or free, "preview_url": ""})
-	return DotResult.success({"trails": rows, "points": points})
+	return GSResult.success({"trails": rows, "points": points})
 
 
-func purchase(id: String) -> DotResult:
+func purchase(id: String) -> GSResult:
 	await _wait()
 	if not prices.has(id):
-		return DotResult.fail(DotError.CODE_INVALID, "unknown_sku")
+		return GSResult.fail(GSError.CODE_INVALID, "unknown_sku")
 	if owned.has(id):
-		return DotResult.fail(DotError.CODE_CONFLICT, "already_owned")
+		return GSResult.fail(GSError.CODE_CONFLICT, "already_owned")
 	var price: int = int(prices[id]["price_points"])
 	if price > points:
-		return DotResult.fail(DotError.CODE_FORBIDDEN, "insufficient_points")
+		return GSResult.fail(GSError.CODE_FORBIDDEN, "insufficient_points")
 	points -= price
 	owned[id] = true
 	save_state()
-	return DotResult.success({"ids": owned.keys(), "points": points})
+	return GSResult.success({"ids": owned.keys(), "points": points})
 
 
-func submit_upload(meta: Dictionary, bytes: PackedByteArray, file_name: String) -> DotResult:
+func submit_upload(meta: Dictionary, bytes: PackedByteArray, file_name: String) -> GSResult:
 	await _wait()
-	var checked := DotTrailUpload.validate(bytes, file_name)
+	var checked := GSTrailUpload.validate(bytes, file_name)
 	if not checked.ok:
 		return checked
 	if str(meta.get("title", "")).strip_edges().is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "a title is required")
+		return GSResult.fail(GSError.CODE_INVALID, "a title is required")
 	var row := {"id": "upload_%d" % (uploads.size() + 1), "status": "pending", "title": str(meta.get("title")),
 		"bytes": bytes.size(), "type": checked.value["type"]}
 	uploads.append(row)
 	save_state()
-	return DotResult.success({"id": row["id"], "status": "pending"})
+	return GSResult.success({"id": row["id"], "status": "pending"})
 
 
-func entitlements(_player: String) -> DotResult:
-	return DotResult.success({"ids": PackedStringArray(owned.keys()), "groups": PackedStringArray(), "equipped": equipped})
+func entitlements(_player: String) -> GSResult:
+	return GSResult.success({"ids": PackedStringArray(owned.keys()), "groups": PackedStringArray(), "equipped": equipped})
 
 
-func set_equipped(id: String, _game: String = "") -> DotResult:
+func set_equipped(id: String, _game: String = "") -> GSResult:
 	if not id.is_empty() and not owned.has(id) and int(prices.get(id, {}).get("price_points", 1)) > 0:
-		return DotResult.fail(DotError.CODE_FORBIDDEN, "not_entitled")
+		return GSResult.fail(GSError.CODE_FORBIDDEN, "not_entitled")
 	equipped = id
-	return DotResult.success({"equipped": id})
+	return GSResult.success({"equipped": id})
 
 
 func save_state() -> void:
@@ -87,7 +87,7 @@ func save_state() -> void:
 		return
 	f.store_string(JSON.stringify({"points": points, "owned": owned.keys(), "uploads": uploads.size()}))
 	f.close()
-	DotWeb.sync_filesystem()
+	GSWeb.sync_filesystem()
 
 
 func load_state() -> void:

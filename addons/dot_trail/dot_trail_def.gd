@@ -1,4 +1,4 @@
-class_name DotTrailDef
+class_name GSTrailDef
 extends Resource
 
 ## One trail: an image, how wide and long-lived the ribbon is, and who may wear it.
@@ -37,46 +37,46 @@ static func valid_id(s: String) -> bool:
 
 
 ## Builds a def from a parsed JSON dictionary, with every field checked.
-static func from_dict(d: Dictionary, limits: Dictionary = {}) -> DotResult:
-	var t := DotTrailDef.new()
+static func from_dict(d: Dictionary, limits: Dictionary = {}) -> GSResult:
+	var t := GSTrailDef.new()
 	t.id = str(d.get("id", ""))
 	if not valid_id(t.id):
-		return DotResult.fail(DotError.CODE_INVALID, "trail id must be 1-32 chars of a-z, 0-9, _", t.id)
+		return GSResult.fail(GSError.CODE_INVALID, "trail id must be 1-32 chars of a-z, 0-9, _", t.id)
 	t.title = str(d.get("title", t.id)).substr(0, 64)
 	t.image = str(d.get("image", ""))
 	var ext := t.image.get_extension().to_lower()
 	if t.image != t.image.get_file() or t.image.begins_with(".") or not (ext == "png" or ext == "webp"):
-		return DotResult.fail(DotError.CODE_INVALID, "trail image must be a plain png or webp file name", t.id)
+		return GSResult.fail(GSError.CODE_INVALID, "trail image must be a plain png or webp file name", t.id)
 	t.width = float(d.get("width", t.width))
 	t.lifetime = float(d.get("lifetime", t.lifetime))
 	var max_w: float = float(limits.get("max_width", 2.0))
 	var max_l: float = float(limits.get("max_lifetime", 5.0))
-	# A limit of 0 is unlimited, as in DotTrailConfig.
+	# A limit of 0 is unlimited, as in GSTrailConfig.
 	if t.width <= 0.0 or (max_w > 0.0 and t.width > max_w) or t.lifetime <= 0.0 or (max_l > 0.0 and t.lifetime > max_l):
-		return DotResult.fail(DotError.CODE_INVALID, "trail width or lifetime out of range", t.id)
+		return GSResult.fail(GSError.CODE_INVALID, "trail width or lifetime out of range", t.id)
 	var col: Variant = d.get("color", "#ffffff")
 	if col is String or col is StringName:
 		if not Color.html_is_valid(str(col)):
-			return DotResult.fail(DotError.CODE_INVALID, "trail color is not a hex colour", t.id)
+			return GSResult.fail(GSError.CODE_INVALID, "trail color is not a hex colour", t.id)
 		t.color = Color.html(str(col))
 	t.blend = str(d.get("blend", "mix"))
 	if not BLENDS.has(t.blend):
-		return DotResult.fail(DotError.CODE_INVALID, "trail blend must be mix, add or mul", t.id)
+		return GSResult.fail(GSError.CODE_INVALID, "trail blend must be mix, add or mul", t.id)
 	t.access = str(d.get("access", ACCESS_PUBLIC))
 	if t.access != ACCESS_PUBLIC and t.access != ACCESS_GROUPS:
-		return DotResult.fail(DotError.CODE_INVALID, "trail access must be public or groups", t.id)
+		return GSResult.fail(GSError.CODE_INVALID, "trail access must be public or groups", t.id)
 	for g in d.get("groups", []):
 		t.groups.append(str(g))
 	if t.access == ACCESS_GROUPS and t.groups.is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "a groups trail needs at least one group", t.id)
+		return GSResult.fail(GSError.CODE_INVALID, "a groups trail needs at least one group", t.id)
 	t.price = int(d.get("price", 0))
 	if t.price < 0:
-		return DotResult.fail(DotError.CODE_INVALID, "trail price must not be negative", t.id)
+		return GSResult.fail(GSError.CODE_INVALID, "trail price must not be negative", t.id)
 	t.credit = str(d.get("credit", "")).substr(0, 200)
 	t.licence = str(d.get("licence", "")).substr(0, 32)
 	t.author = str(d.get("author", "")).substr(0, 100)
 	t.url = str(d.get("url", "")).substr(0, 300)
-	return DotResult.success(t)
+	return GSResult.success(t)
 
 
 func to_dict() -> Dictionary:

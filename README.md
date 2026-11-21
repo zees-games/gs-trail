@@ -12,13 +12,13 @@ Players equip a trail, an image ribbon that follows them as they move. Operators
 ## Use
 
 ```gdscript
-var trails := DotTrailRegistry.new()
-trails.install()                                   # DotRegistry, no autoload
+var trails := GSTrailRegistry.new()
+trails.install()                                   # GSRegistry, no autoload
 trails.load_index(index_json, files)               # the downloaded pack
-var equip := DotTrailEquip.new(trails)
-var res := equip.equip(peer_id, "spark", groups, entitlements)   # DotResult; server only
+var equip := GSTrailEquip.new(trails)
+var res := equip.equip(peer_id, "spark", groups, entitlements)   # GSResult; server only
 
-var emitter := DotTrailEmitter.new()               # child of the player, or set `target`
+var emitter := GSTrailEmitter.new()               # child of the player, or set `target`
 emitter.registry = trails
 player.add_child(emitter)
 emitter.set_trail(trails.get_def(equip.worn(peer_id)))
@@ -26,7 +26,7 @@ emitter.set_trail(trails.get_def(equip.worn(peer_id)))
 
 ## Settings
 
-`DotTrailConfig`, layered as file, then `DOT_TRAIL_*` environment, then `--trail-*` command line.
+`GSTrailConfig`, layered as file, then `DOT_TRAIL_*` environment, then `--trail-*` command line.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |

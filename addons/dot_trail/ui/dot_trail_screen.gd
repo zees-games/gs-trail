@@ -1,7 +1,7 @@
-class_name DotTrailScreen
+class_name GSTrailScreen
 extends VBoxContainer
 
-## The trails screen: every trail of the server's pack as a card with a live ribbon, its price, Buy or Equip, and a form to send your own for review. Prices and purchases go through a [DotTrailBackend]; equipping asks the server through [member request_fn].
+## The trails screen: every trail of the server's pack as a card with a live ribbon, its price, Buy or Equip, and a form to send your own for review. Prices and purchases go through a [GSTrailBackend]; equipping asks the server through [member request_fn].
 
 const CHANNEL := "trail"
 const COLUMNS := 3
@@ -10,22 +10,22 @@ signal purchased(id: String)
 signal equip_requested(id: String)
 signal submitted(id: String)
 
-var registry: DotTrailRegistry = null
-var backend: DotTrailBackend = null
-## func(id: String) -> DotResult: asks the server (DotTrailClient.request).
+var registry: GSTrailRegistry = null
+var backend: GSTrailBackend = null
+## func(id: String) -> GSResult: asks the server (GSTrailClient.request).
 var request_fn: Callable = Callable()
 ## func() -> String: the trail the server says this player wears.
 var worn_fn: Callable = Callable()
 ## The player's groups, for members-only trails.
 var groups := PackedStringArray()
-var k: DotTrailKit = null
+var k: GSTrailKit = null
 
 ## id -> {card, preview, status, action, off}
 var cards: Dictionary = {}
 var points: int = -1
 var owned: Dictionary = {}
 var catalog_rows: Dictionary = {}
-var upload: DotTrailUploadPanel = null
+var upload: GSTrailUploadPanel = null
 var _points_label: Label = null
 var _status: Label = null
 var _grid: GridContainer = null
@@ -33,13 +33,13 @@ var _textures: Dictionary = {}
 var _busy := false
 
 
-## Builds the screen into [param parent] (a DotMenuPage body, or any container). [param kit] is dot-menu's kit or null.
-static func make(parent: Control, p_registry: DotTrailRegistry, p_backend: DotTrailBackend, kit: Object = null, heading: bool = true) -> DotTrailScreen:
-	var s := DotTrailScreen.new()
+## Builds the screen into [param parent] (a GSMenuPage body, or any container). [param kit] is dot-menu's kit or null.
+static func make(parent: Control, p_registry: GSTrailRegistry, p_backend: GSTrailBackend, kit: Object = null, heading: bool = true) -> GSTrailScreen:
+	var s := GSTrailScreen.new()
 	s.name = "Trails"
 	s.registry = p_registry
 	s.backend = p_backend
-	s.k = DotTrailKit.new(kit)
+	s.k = GSTrailKit.new(kit)
 	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	s.add_theme_constant_override(&"separation", 14)
 	parent.add_child(s)
@@ -48,7 +48,7 @@ static func make(parent: Control, p_registry: DotTrailRegistry, p_backend: DotTr
 
 
 ## Sets the trail set and the store after [method make] (a menu page builds first).
-func bind(p_registry: DotTrailRegistry, p_backend: DotTrailBackend) -> void:
+func bind(p_registry: GSTrailRegistry, p_backend: GSTrailBackend) -> void:
 	registry = p_registry
 	backend = p_backend
 	if upload != null:
@@ -79,23 +79,23 @@ func _build(heading: bool) -> void:
 	_grid.add_theme_constant_override(&"v_separation", 12)
 	add_child(_grid)
 	add_child(k.section("Make your own"))
-	upload = DotTrailUploadPanel.make(self, backend, k)
+	upload = GSTrailUploadPanel.make(self, backend, k)
 	upload.submitted.connect(func(id: String) -> void: submitted.emit(id))
 	_rebuild_cards()
 
 
 ## Reads prices, points and what is owned from the backend, then redraws. Awaitable.
-func refresh() -> DotResult:
+func refresh() -> GSResult:
 	if backend == null:
 		_rebuild_cards()
-		return DotResult.fail(DotError.CODE_STATE, "no trail store")
+		return GSResult.fail(GSError.CODE_STATE, "no trail store")
 	_say("Loading the store…")
-	var res: DotResult = await backend.catalog()
+	var res: GSResult = await backend.catalog()
 	if not is_instance_valid(self):
 		return res
 	if not res.ok:
-		DotLog.warn(CHANNEL, "trail store unavailable", {"code": res.code()})
-		_say("The store is unavailable: %s" % DotTrailBackend.explain(res), true)
+		GSLog.warn(CHANNEL, "trail store unavailable", {"code": res.code()})
+		_say("The store is unavailable: %s" % GSTrailBackend.explain(res), true)
 		_rebuild_cards()
 		return res
 	catalog_rows.clear()
@@ -110,18 +110,18 @@ func refresh() -> DotResult:
 
 
 ## Spends points on [param id]; on success the trail is owned and equipped.
-func buy(id: String) -> DotResult:
+func buy(id: String) -> GSResult:
 	if _busy:
-		return DotResult.fail(DotError.CODE_STATE, "busy")
+		return GSResult.fail(GSError.CODE_STATE, "busy")
 	_busy = true
 	_say("Buying %s…" % _title(id))
-	var res: DotResult = await backend.purchase(id)
+	var res: GSResult = await backend.purchase(id)
 	_busy = false
 	if not is_instance_valid(self):
 		return res
 	if not res.ok:
-		DotLog.info(CHANNEL, "trail purchase refused", {"trail": id, "code": res.code()})
-		_say(DotTrailBackend.explain(res), true)
+		GSLog.info(CHANNEL, "trail purchase refused", {"trail": id, "code": res.code()})
+		_say(GSTrailBackend.explain(res), true)
 		return res
 	for owned_id: Variant in res.value.get("ids", []):
 		owned[str(owned_id)] = true
@@ -136,11 +136,11 @@ func buy(id: String) -> DotResult:
 
 
 ## Asks the server to wear [param id] ("" takes it off). The card updates when the server answers ([method server_changed]).
-func equip(id: String) -> DotResult:
+func equip(id: String) -> GSResult:
 	equip_requested.emit(id)
 	if not request_fn.is_valid():
-		return DotResult.fail(DotError.CODE_STATE, "not connected")
-	var res: DotResult = request_fn.call(id)
+		return GSResult.fail(GSError.CODE_STATE, "not connected")
+	var res: GSResult = request_fn.call(id)
 	_say("Asking the server…" if res.ok else "Not connected to a server.", not res.ok)
 	if res.ok:
 		_persist_equipped(id)
@@ -151,12 +151,12 @@ func equip(id: String) -> DotResult:
 func _persist_equipped(id: String) -> void:
 	if backend == null:
 		return
-	var res: DotResult = await backend.set_equipped(id)
-	if not res.ok and res.code() != DotError.CODE_UNSUPPORTED:
-		DotLog.info(CHANNEL, "trail equip not saved to the site", {"trail": id, "code": res.code()})
+	var res: GSResult = await backend.set_equipped(id)
+	if not res.ok and res.code() != GSError.CODE_UNSUPPORTED:
+		GSLog.info(CHANNEL, "trail equip not saved to the site", {"trail": id, "code": res.code()})
 
 
-## The server's word on what this player wears; call from DotTrailClient.changed.
+## The server's word on what this player wears; call from GSTrailClient.changed.
 func server_changed() -> void:
 	_say("")
 	_rebuild_cards()
@@ -217,7 +217,7 @@ func _card(id: String) -> Control:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override(&"separation", 6)
 	card.add_child(col)
-	var preview := DotTrailPreview.new()
+	var preview := GSTrailPreview.new()
 	preview.custom_minimum_size = Vector2(200, 110)
 	preview.t = float(cards.size()) * 0.9
 	if not _textures.has(id):
@@ -237,7 +237,7 @@ func _card(id: String) -> Control:
 	return card
 
 
-func _fill_actions(id: String, def: DotTrailDef, row: HBoxContainer, entry: Dictionary) -> void:
+func _fill_actions(id: String, def: GSTrailDef, row: HBoxContainer, entry: Dictionary) -> void:
 	var worn := _worn() == id
 	var price := price_of(id)
 	var action: Button
@@ -255,7 +255,7 @@ func _fill_actions(id: String, def: DotTrailDef, row: HBoxContainer, entry: Dict
 		action = k.primary("Equip")
 		action.pressed.connect(func() -> void: var _r := equip(id))
 		row.add_child(action)
-	elif def.access == DotTrailDef.ACCESS_GROUPS and price <= 0:
+	elif def.access == GSTrailDef.ACCESS_GROUPS and price <= 0:
 		entry["status"].text = "Members only: " + ", ".join(def.groups)
 		action = k.secondary("Locked")
 		action.disabled = true

@@ -1,7 +1,7 @@
-class_name DotTrailBackendHttp
-extends DotTrailBackend
+class_name GSTrailBackendHttp
+extends GSTrailBackend
 
-## The TMC site's trail store over [DotHttp] (HTTPRequest, so it runs in a browser). A player's calls use /api/app/v1 with their token; the game server's use /api/integration/v1 with its integration key. Paths and field names are settable (see [method apply_config]).
+## The TMC site's trail store over [GSHttp] (HTTPRequest, so it runs in a browser). A player's calls use /api/app/v1 with their token; the game server's use /api/integration/v1 with its integration key. Paths and field names are settable (see [method apply_config]).
 
 ## Player routes: GET lists, PUT sets what is worn, POST purchase buys with points.
 var catalog_path := "/api/app/v1/trails"
@@ -14,7 +14,7 @@ var entitlements_path := "/api/integration/v1/trails/entitlements"
 ## Query parameter naming the player on the entitlements route.
 var player_param := "player"
 
-var http: DotHttp = null
+var http: GSHttp = null
 ## func() -> String: the signed-in player's bearer token, "" for a guest.
 var token_fn: Callable = Callable()
 ## The server's integration token; never set on a client, never logged.
@@ -23,9 +23,9 @@ var _skus: Dictionary = {}
 
 
 ## [param host] keeps the HTTPRequest node; it is freed with it.
-static func make(host: Node, base_url: String, p_token_fn: Callable = Callable()) -> DotTrailBackendHttp:
-	var b := DotTrailBackendHttp.new()
-	b.http = DotHttp.new()
+static func make(host: Node, base_url: String, p_token_fn: Callable = Callable()) -> GSTrailBackendHttp:
+	var b := GSTrailBackendHttp.new()
+	b.http = GSHttp.new()
 	b.http.name = "TrailStoreHttp"
 	b.http.base_url = base_url
 	host.add_child(b.http)
@@ -44,93 +44,93 @@ func apply_config(cfg: Dictionary) -> void:
 		player_param = param
 
 
-func catalog() -> DotResult:
-	var res: DotResult = await http.get_json(catalog_path, _player_headers())
+func catalog() -> GSResult:
+	var res: GSResult = await http.get_json(catalog_path, _player_headers())
 	if not res.ok:
 		return res
 	var body: Variant = res.value
 	if not (body is Dictionary) or not (body.get("trails") is Array):
-		return DotResult.fail(DotError.CODE_PARSE, "trail list is not {trails: [...]}")
+		return GSResult.fail(GSError.CODE_PARSE, "trail list is not {trails: [...]}")
 	var rows: Array = []
 	for row: Variant in body["trails"]:
-		if row is Dictionary and DotTrailDef.valid_id(str(row.get("id", ""))):
+		if row is Dictionary and GSTrailDef.valid_id(str(row.get("id", ""))):
 			rows.append(_row(row))
-	return DotResult.success({"trails": rows, "points": _int(body.get("points", body.get("balance")), -1),
+	return GSResult.success({"trails": rows, "points": _int(body.get("points", body.get("balance")), -1),
 		"equipped": str(body.get("equipped", ""))})
 
 
-func purchase(id: String) -> DotResult:
+func purchase(id: String) -> GSResult:
 	var headers := _player_headers()
 	if not headers.has("Authorization"):
-		return DotResult.fail(DotError.CODE_AUTH, "unauthorized")
+		return GSResult.fail(GSError.CODE_AUTH, "unauthorized")
 	var body := {"id": id, "sku": _skus.get(id, "trail:" + id), "purchase_id": _purchase_id(id)}
-	var res: DotResult = await http.post_json(purchase_path, body, headers)
+	var res: GSResult = await http.post_json(purchase_path, body, headers)
 	if not res.ok:
 		return res
 	var v: Variant = res.value
 	if not (v is Dictionary):
-		return DotResult.fail(DotError.CODE_PARSE, "purchase answer is not an object")
-	return DotResult.success({"ids": _ids(v.get("ids", v.get("owned", v.get("trails", [])))), "points": _int(v.get("points", v.get("balance")), -1)})
+		return GSResult.fail(GSError.CODE_PARSE, "purchase answer is not an object")
+	return GSResult.success({"ids": _ids(v.get("ids", v.get("owned", v.get("trails", [])))), "points": _int(v.get("points", v.get("balance")), -1)})
 
 
-func set_equipped(id: String, game: String = "") -> DotResult:
+func set_equipped(id: String, game: String = "") -> GSResult:
 	var headers := _player_headers()
 	if not headers.has("Authorization"):
-		return DotResult.fail(DotError.CODE_AUTH, "unauthorized")
+		return GSResult.fail(GSError.CODE_AUTH, "unauthorized")
 	var body := {"id": id}
 	if not game.is_empty():
 		body["game"] = game
-	var res: DotResult = await http.put_json(equipped_path, body, headers)
+	var res: GSResult = await http.put_json(equipped_path, body, headers)
 	if not res.ok:
 		return res
-	return DotResult.success({"equipped": id})
+	return GSResult.success({"equipped": id})
 
 
-func submit_upload(meta: Dictionary, bytes: PackedByteArray, file_name: String) -> DotResult:
-	var checked := DotTrailUpload.validate(bytes, file_name)
+func submit_upload(meta: Dictionary, bytes: PackedByteArray, file_name: String) -> GSResult:
+	var checked := GSTrailUpload.validate(bytes, file_name)
 	if not checked.ok:
 		return checked
 	var headers := _player_headers()
 	if not headers.has("Authorization"):
-		return DotResult.fail(DotError.CODE_AUTH, "unauthorized")
+		return GSResult.fail(GSError.CODE_AUTH, "unauthorized")
 	var body := {"title": str(meta.get("title", "")), "licence": str(meta.get("licence", "")),
 		"author": str(meta.get("author", "")), "url": str(meta.get("url", "")),
 		"file_name": file_name, "image_base64": Marshalls.raw_to_base64(bytes)}
 	return await http.post_json(uploads_path, body, headers)
 
 
-func entitlements(player: String) -> DotResult:
-	var res: DotResult = await _server_get("%s?%s=%s" % [entitlements_path, player_param, player.uri_encode()])
+func entitlements(player: String) -> GSResult:
+	var res: GSResult = await _server_get("%s?%s=%s" % [entitlements_path, player_param, player.uri_encode()])
 	if not res.ok:
 		return res
 	var v: Variant = res.value
 	if not (v is Dictionary):
-		return DotResult.fail(DotError.CODE_PARSE, "entitlements answer is not an object")
+		return GSResult.fail(GSError.CODE_PARSE, "entitlements answer is not an object")
 	var ids := _ids(v.get("trails", v.get("ids", [])))
 	var equipped: Variant = v.get("equipped", "")
 	if equipped is Dictionary:
 		equipped = equipped.get("id", "")
-	return DotResult.success({"ids": ids, "groups": _ids(v.get("groups", [])), "equipped": str(equipped)})
+	return GSResult.success({"ids": ids, "groups": _ids(v.get("groups", [])), "equipped": str(equipped)})
 
 
-func server_catalog() -> DotResult:
-	var res: DotResult = await _server_get(server_catalog_path)
+func server_catalog() -> GSResult:
+	var res: GSResult = await _server_get(server_catalog_path)
 	if not res.ok:
 		return res
 	var v: Variant = res.value
 	var list: Variant = v.get("trails") if v is Dictionary else v
 	if not (list is Array):
-		return DotResult.fail(DotError.CODE_PARSE, "trail catalog is not a list")
+		return GSResult.fail(GSError.CODE_PARSE, "trail catalog is not a list")
 	var rows: Array = []
 	for row: Variant in list:
-		if row is Dictionary and DotTrailDef.valid_id(str(row.get("id", ""))):
+		if row is Dictionary and GSTrailDef.valid_id(str(row.get("id", ""))):
 			rows.append(row)
-	return DotResult.success({"trails": rows})
+	return GSResult.success({"trails": rows})
 
 
-func _server_get(path: String) -> DotResult:
+func _server_get(path: String) -> GSResult:
 	if api_key.is_empty():
-		return DotResult.fail(DotError.CODE_AUTH, "no trail API key")
+		return GSResult.fail(GSError.CODE_AUTH, "no trail API key")
 	return await http.get_json(path, {"Authorization": "Bearer " + api_key})
 
 

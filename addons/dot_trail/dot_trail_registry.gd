@@ -1,24 +1,24 @@
-class_name DotTrailRegistry
+class_name GSTrailRegistry
 extends RefCounted
 
-## The set of trails a server offers, loaded from the pack's trails.json. Registered with DotRegistry, never an autoload.
+## The set of trails a server offers, loaded from the pack's trails.json. Registered with GSRegistry, never an autoload.
 
 const CHANNEL := "trail"
 const SERVICE := &"trail_registry"
 const INDEX_FILE := "trails.json"
 
-var config: DotTrailConfig = DotTrailConfig.new()
+var config: GSTrailConfig = GSTrailConfig.new()
 var _defs: Dictionary = {}
 ## image file name -> validated bytes.
 var _images: Dictionary = {}
 
 
-static func current() -> DotTrailRegistry:
-	return DotRegistry.get_service(SERVICE) as DotTrailRegistry
+static func current() -> GSTrailRegistry:
+	return GSRegistry.get_service(SERVICE) as GSTrailRegistry
 
 
 func install() -> void:
-	DotRegistry.register(SERVICE, self)
+	GSRegistry.register(SERVICE, self)
 
 
 func count() -> int:
@@ -31,24 +31,24 @@ func ids() -> PackedStringArray:
 	return out
 
 
-func get_def(id: String) -> DotTrailDef:
-	return _defs.get(id) as DotTrailDef
+func get_def(id: String) -> GSTrailDef:
+	return _defs.get(id) as GSTrailDef
 
 
-## Adds a def and its image bytes. The image goes through DotTrailUpload.validate, so a pack cannot carry anything else.
-func add(def: DotTrailDef, image_bytes: PackedByteArray) -> DotResult:
+## Adds a def and its image bytes. The image goes through GSTrailUpload.validate, so a pack cannot carry anything else.
+func add(def: GSTrailDef, image_bytes: PackedByteArray) -> GSResult:
 	if _defs.has(def.id):
-		return DotResult.fail(DotError.CODE_CONFLICT, "trail id already exists", def.id)
+		return GSResult.fail(GSError.CODE_CONFLICT, "trail id already exists", def.id)
 	if config.max_trails > 0 and _defs.size() >= config.max_trails:
-		return DotResult.fail(DotError.CODE_QUOTA, "trail limit reached (%d)" % config.max_trails, def.id)
-	var ok := DotTrailUpload.validate(image_bytes, def.image, config.limits())
+		return GSResult.fail(GSError.CODE_QUOTA, "trail limit reached (%d)" % config.max_trails, def.id)
+	var ok := GSTrailUpload.validate(image_bytes, def.image, config.limits())
 	if not ok.ok:
-		DotLog.warn(CHANNEL, "rejected trail image", {"id": def.id, "code": ok.code()})
+		GSLog.warn(CHANNEL, "rejected trail image", {"id": def.id, "code": ok.code()})
 		return ok.wrap("trail " + def.id)
 	_defs[def.id] = def
 	_images[def.image] = image_bytes
-	DotLog.debug(CHANNEL, "trail added", {"id": def.id})
-	return DotResult.success(def)
+	GSLog.debug(CHANNEL, "trail added", {"id": def.id})
+	return GSResult.success(def)
 
 
 func remove(id: String) -> bool:
@@ -57,7 +57,7 @@ func remove(id: String) -> bool:
 		return false
 	_defs.erase(id)
 	var shared := false
-	for other: DotTrailDef in _defs.values():
+	for other: GSTrailDef in _defs.values():
 		shared = shared or other.image == def.image
 	if not shared:
 		_images.erase(def.image)
@@ -65,30 +65,30 @@ func remove(id: String) -> bool:
 
 
 ## Parses trails.json text and takes the images from [param files] (file name -> bytes). All or nothing.
-func load_index(json_text: String, files: Dictionary) -> DotResult:
+func load_index(json_text: String, files: Dictionary) -> GSResult:
 	var json := JSON.new()
 	var parsed: Variant = json.data if json.parse(json_text) == OK else null
 	if not (parsed is Dictionary) or not (parsed.get("trails") is Array):
-		return DotResult.fail(DotError.CODE_PARSE, "trails.json must be an object with a trails array")
-	var staged := DotTrailRegistry.new()
+		return GSResult.fail(GSError.CODE_PARSE, "trails.json must be an object with a trails array")
+	var staged := GSTrailRegistry.new()
 	staged.config = config
 	staged._defs = _defs.duplicate()
 	staged._images = _images.duplicate()
 	for entry: Variant in parsed["trails"]:
 		if not (entry is Dictionary):
-			return DotResult.fail(DotError.CODE_PARSE, "trail entry is not an object")
-		var made := DotTrailDef.from_dict(entry, config.limits())
+			return GSResult.fail(GSError.CODE_PARSE, "trail entry is not an object")
+		var made := GSTrailDef.from_dict(entry, config.limits())
 		if not made.ok:
 			return made
-		var def: DotTrailDef = made.value
+		var def: GSTrailDef = made.value
 		if not files.has(def.image):
-			return DotResult.fail(DotError.CODE_INVALID, "index names a missing image " + def.image, def.id)
+			return GSResult.fail(GSError.CODE_INVALID, "index names a missing image " + def.image, def.id)
 		var added := staged.add(def, files[def.image])
 		if not added.ok:
 			return added
 	_defs = staged._defs
 	_images = staged._images
-	return DotResult.success(_defs.size())
+	return GSResult.success(_defs.size())
 
 
 func to_index() -> String:
@@ -122,23 +122,23 @@ func texture_for(id: String) -> Texture2D:
 
 
 ## The access rule. [param entitlements] are ids the backend says the player owns (purchases).
-func may_equip(id: String, groups: PackedStringArray, entitlements: PackedStringArray = PackedStringArray()) -> DotResult:
+func may_equip(id: String, groups: PackedStringArray, entitlements: PackedStringArray = PackedStringArray()) -> GSResult:
 	var def := get_def(id)
 	if def == null:
-		return DotResult.fail(DotError.CODE_INVALID, "unknown trail", id)
-	if def.access == DotTrailDef.ACCESS_PUBLIC and def.price == 0:
-		return DotResult.success(def)
+		return GSResult.fail(GSError.CODE_INVALID, "unknown trail", id)
+	if def.access == GSTrailDef.ACCESS_PUBLIC and def.price == 0:
+		return GSResult.success(def)
 	if entitlements.has(id):
-		return DotResult.success(def)
-	if def.access == DotTrailDef.ACCESS_GROUPS:
+		return GSResult.success(def)
+	if def.access == GSTrailDef.ACCESS_GROUPS:
 		for g in def.groups:
 			if groups.has(g):
-				return DotResult.success(def)
-	return DotResult.fail(DotError.CODE_FORBIDDEN, "trail is not available to this player", id)
+				return GSResult.success(def)
+	return GSResult.fail(GSError.CODE_FORBIDDEN, "trail is not available to this player", id)
 
 
 func describe() -> String:
-	return "DotTrailRegistry: %d trails, %d images" % [_defs.size(), _images.size()]
+	return "GSTrailRegistry: %d trails, %d images" % [_defs.size(), _images.size()]
 
 
 func describe_lines() -> PackedStringArray:

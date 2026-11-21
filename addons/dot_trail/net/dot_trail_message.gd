@@ -1,5 +1,5 @@
-class_name DotTrailMessage
-extends DotNetMessage
+class_name GSTrailMessage
+extends GSNetMessage
 
 ## A player's equipped trail id. A client asks (id, "" to take it off); the server checks and tells everyone (actor, id). Only the id travels: the image comes in the server's trail pack.
 
@@ -15,20 +15,20 @@ func _type_name() -> StringName:
 	return NAME
 
 
-func _write(w: DotNetWriter) -> void:
+func _write(w: GSNetWriter) -> void:
 	w.write_varint(actor)
 	w.write_string(id, MAX_ID)
 
 
-func _read(r: DotNetReader) -> void:
+func _read(r: GSNetReader) -> void:
 	actor = r.read_varint()
 	id = r.read_string(MAX_ID)
 
 
-func _validate() -> DotResult:
+func _validate() -> GSResult:
 	if not valid_wire_id(id):
-		return DotResult.fail(DotError.CODE_INVALID, "trail id out of range or has a character outside a-z, 0-9, _")
-	return DotResult.success(true)
+		return GSResult.fail(GSError.CODE_INVALID, "trail id out of range or has a character outside a-z, 0-9, _")
+	return GSResult.success(true)
 
 
 ## An id as it may travel: empty (take it off) or up to [constant MAX_ID] of a-z, 0-9, _.
@@ -43,7 +43,7 @@ static func valid_wire_id(p_id: String) -> bool:
 
 
 ## Registers the type on [param net]'s manager: call on both ends, before the schema is sealed. Idempotent.
-static func register(net: DotNetManager) -> DotResult:
+static func register(net: GSNetManager) -> GSResult:
 	if net.messages.type_names().has(String(NAME)):
-		return DotResult.success(true)
-	return net.messages.register(NAME, DotTrailMessage, DotNetMessage.Delivery.RELIABLE, DotNetMessage.Direction.BOTH, false)
+		return GSResult.success(true)
+	return net.messages.register(NAME, GSTrailMessage, GSNetMessage.Delivery.RELIABLE, GSNetMessage.Direction.BOTH, false)

@@ -41,7 +41,7 @@ class FakeLink:
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.FATAL)
+	GSLog.set_level(GSLog.Level.FATAL)
 	_rng.seed = 20261029
 	_host = Control.new()
 	add_child(_host)
@@ -76,8 +76,8 @@ func _noise(w: int, h: int) -> Image:
 	return img
 
 
-func _registry() -> DotTrailRegistry:
-	var r := DotTrailRegistry.new()
+func _registry() -> GSTrailRegistry:
+	var r := GSTrailRegistry.new()
 	r.config.equip_cooldown = 0.0
 	var defs := [
 		{"id": "spark", "title": "Spark", "price": 0, "color": "#ffd060", "blend": "add"},
@@ -87,7 +87,7 @@ func _registry() -> DotTrailRegistry:
 	]
 	for d: Dictionary in defs:
 		d["image"] = d["id"] + ".png"
-		var def: DotTrailDef = DotTrailDef.from_dict(d).value
+		var def: GSTrailDef = GSTrailDef.from_dict(d).value
 		var _a := r.add(def, _noise(16, 4).save_png_to_buffer())
 	return r
 
@@ -95,79 +95,79 @@ func _registry() -> DotTrailRegistry:
 func _test_envelope() -> void:
 	_section("envelope transport")
 	var reg := _registry()
-	var relay := DotTrailRelay.create(DotTrailEquip.new(reg))
+	var relay := GSTrailRelay.create(GSTrailEquip.new(reg))
 	var server := FakeServer.new()
-	_check(DotTrailEnvelope.serve(server, relay).ok, "serve registers on a server")
-	_check(server.envelope.handlers.has(DotTrailEnvelope.KIND), "the server handles dot.trail")
+	_check(GSTrailEnvelope.serve(server, relay).ok, "serve registers on a server")
+	_check(server.envelope.handlers.has(GSTrailEnvelope.KIND), "the server handles dot.trail")
 	relay.add_peer(1)
 	relay.add_peer(2)
-	server.envelope.handlers[DotTrailEnvelope.KIND].call(1, {"id": "spark"})
+	server.envelope.handlers[GSTrailEnvelope.KIND].call(1, {"id": "spark"})
 	_check(server.sent.size() == 2, "a free trail is told to both peers (%d sends)" % server.sent.size())
 	_check(server.sent.all(func(s: Dictionary) -> bool: return s["payload"] == {"actor": 1, "id": "spark"} and s["lane"] == 2), "each send is {actor 1, spark} on the event lane")
 	server.sent.clear()
-	server.envelope.handlers[DotTrailEnvelope.KIND].call(2, {"id": "comet"})
+	server.envelope.handlers[GSTrailEnvelope.KIND].call(2, {"id": "comet"})
 	_check(server.sent.size() == 1 and server.sent[0]["peer"] == 2 and server.sent[0]["payload"]["id"] == "", "an unbought trail is refused to the sender only")
 	server.sent.clear()
-	server.envelope.handlers[DotTrailEnvelope.KIND].call(2, {"id": 7})
-	server.envelope.handlers[DotTrailEnvelope.KIND].call(2, {"id": "../../etc"})
+	server.envelope.handlers[GSTrailEnvelope.KIND].call(2, {"id": 7})
+	server.envelope.handlers[GSTrailEnvelope.KIND].call(2, {"id": "../../etc"})
 	_check(server.sent.is_empty(), "a malformed id is dropped without an answer")
 	relay.add_peer(3)
 	_check(server.sent.size() == 1 and server.sent[0]["peer"] == 3 and server.sent[0]["payload"]["id"] == "spark", "a joiner hears who wears what")
 
 	var link := FakeLink.new()
-	var client := DotTrailClient.new()
+	var client := GSTrailClient.new()
 	client.registry = reg
-	_check(DotTrailEnvelope.attach(link, client).ok, "attach registers on a link")
+	_check(GSTrailEnvelope.attach(link, client).ok, "attach registers on a link")
 	_check(client.request("spark").ok and link.sent.size() == 1 and link.sent[0]["payload"] == {"id": "spark"}, "request goes up as dot.trail {id}")
-	link.envelope.handlers[DotTrailEnvelope.KIND].call(1, {"actor": 4.0, "id": "comet"})
+	link.envelope.handlers[GSTrailEnvelope.KIND].call(1, {"actor": 4.0, "id": "comet"})
 	_check(client.worn.get(4, "") == "comet", "a JSON number actor is read as a peer id")
-	link.envelope.handlers[DotTrailEnvelope.KIND].call(1, {"actor": 4, "id": ""})
+	link.envelope.handlers[GSTrailEnvelope.KIND].call(1, {"actor": 4, "id": ""})
 	_check(not client.worn.has(4), "an empty id takes the trail off")
-	_check(not DotTrailEnvelope.serve(RefCounted.new(), relay).ok, "serve refuses an object without an envelope")
+	_check(not GSTrailEnvelope.serve(RefCounted.new(), relay).ok, "serve refuses an object without an envelope")
 	var figure := Node3D.new()
 	_host.add_child(figure)
 	client.receive(6, "spark")
 	client.node_for = func(actor: int) -> Node: return figure if actor == 6 else null
-	_check(client.apply_missing() == 1 and figure.has_meta(DotTrailClient.EMITTER_META), "a figure that spawns late gets its ribbon")
+	_check(client.apply_missing() == 1 and figure.has_meta(GSTrailClient.EMITTER_META), "a figure that spawns late gets its ribbon")
 	_check(client.apply_missing() == 0, "and only once")
 	figure.free()
 
 	var ents := {}
-	var relay2 := DotTrailRelay.create(DotTrailEquip.new(reg), Callable(), func(p: int) -> PackedStringArray: return PackedStringArray(ents.get(p, [])))
+	var relay2 := GSTrailRelay.create(GSTrailEquip.new(reg), Callable(), func(p: int) -> PackedStringArray: return PackedStringArray(ents.get(p, [])))
 	var s2 := FakeServer.new()
 	var refreshed: Array = []
-	var _s := DotTrailEnvelope.serve(s2, relay2, func(p: int, id: String) -> void:
+	var _s := GSTrailEnvelope.serve(s2, relay2, func(p: int, id: String) -> void:
 		refreshed.append(id)
 		ents[p] = [id])
 	relay2.add_peer(1)
-	s2.envelope.handlers[DotTrailEnvelope.KIND].call(1, {"id": "comet"})
+	s2.envelope.handlers[GSTrailEnvelope.KIND].call(1, {"id": "comet"})
 	_check(refreshed == ["comet"] and s2.sent.size() == 1 and s2.sent[0]["payload"]["id"] == "comet", "a trail bought a moment ago is fetched, then worn")
-	s2.envelope.handlers[DotTrailEnvelope.KIND].call(1, {"id": "spark"})
+	s2.envelope.handlers[GSTrailEnvelope.KIND].call(1, {"id": "spark"})
 	_check(refreshed.size() == 1, "a trail already allowed asks the store nothing")
 
 
 func _test_store() -> void:
 	_section("stub store")
 	var reg := _registry()
-	var b := DotTrailBackendStub.from_registry(reg, 1000)
-	var cat: DotResult = await b.catalog()
+	var b := GSTrailBackendStub.from_registry(reg, 1000)
+	var cat: GSResult = await b.catalog()
 	var rows: Dictionary = {}
 	for r: Dictionary in cat.value["trails"]:
 		rows[r["id"]] = r
 	_check(cat.ok and rows.size() == 4 and int(cat.value["points"]) == 1000, "catalog lists four trails and the balance")
 	_check(rows["spark"]["free"] and rows["spark"]["owned"], "a free public trail is owned")
 	_check(not rows["vip"]["owned"], "a free members-only trail is not owned")
-	var bought: DotResult = await b.purchase("comet")
+	var bought: GSResult = await b.purchase("comet")
 	_check(bought.ok and int(bought.value["points"]) == 700, "buying comet costs 300")
-	var again: DotResult = await b.purchase("comet")
-	_check(again.code() == DotError.CODE_CONFLICT and DotTrailBackend.explain(again).contains("already"), "buying twice is refused as already owned")
-	var poor: DotResult = await b.purchase("royal")
-	_check(poor.code() == DotError.CODE_FORBIDDEN and DotTrailBackend.explain(poor).contains("points"), "too few points is explained")
-	var nope: DotResult = await b.purchase("nope")
+	var again: GSResult = await b.purchase("comet")
+	_check(again.code() == GSError.CODE_CONFLICT and GSTrailBackend.explain(again).contains("already"), "buying twice is refused as already owned")
+	var poor: GSResult = await b.purchase("royal")
+	_check(poor.code() == GSError.CODE_FORBIDDEN and GSTrailBackend.explain(poor).contains("points"), "too few points is explained")
+	var nope: GSResult = await b.purchase("nope")
 	_check(not nope.ok, "an unknown sku is refused")
 	b.save_path = "user://trail_stub_selftest.json"
 	b.save_state()
-	var c := DotTrailBackendStub.from_registry(reg, 1000)
+	var c := GSTrailBackendStub.from_registry(reg, 1000)
 	c.save_path = b.save_path
 	c.load_state()
 	_check(c.points == 700 and c.owned.has("comet"), "the store survives a reload")
@@ -177,16 +177,16 @@ func _test_store() -> void:
 func _test_screen() -> void:
 	_section("screen")
 	var reg := _registry()
-	var b := DotTrailBackendStub.from_registry(reg, 1000)
+	var b := GSTrailBackendStub.from_registry(reg, 1000)
 	var asked: Array = []
 	var worn := [""]
-	var screen := DotTrailScreen.make(_host, reg, b)
-	screen.request_fn = func(id: String) -> DotResult:
+	var screen := GSTrailScreen.make(_host, reg, b)
+	screen.request_fn = func(id: String) -> GSResult:
 		asked.append(id)
-		return DotResult.success(id)
+		return GSResult.success(id)
 	screen.worn_fn = func() -> String: return worn[0]
 	_check(screen.cards.size() == 4, "one card per trail before the store answers")
-	var res: DotResult = await screen.refresh()
+	var res: GSResult = await screen.refresh()
 	_check(res.ok and screen.points == 1000, "refresh reads the balance")
 	_check(screen._points_label.text == "Points: 1000", "the header shows the balance")
 	_check(screen.cards["spark"]["action"].text == "Equip", "a free trail offers Equip")
@@ -197,7 +197,7 @@ func _test_screen() -> void:
 	screen.cards["spark"]["action"].pressed.emit()
 	_check(asked == ["spark"], "Equip asks the server")
 	_check(b.equipped == "spark", "Equip also records the choice with the backend")
-	var bought: DotResult = await screen.buy("comet")
+	var bought: GSResult = await screen.buy("comet")
 	_check(bought.ok and screen.points == 700 and screen.owned.has("comet"), "Buy spends points and owns the trail")
 	_check(asked.back() == "comet", "a purchase equips the trail")
 	_check(screen.cards["comet"]["action"].text == "Equip", "the bought card now offers Equip")
@@ -206,7 +206,7 @@ func _test_screen() -> void:
 	_check(screen.cards["comet"]["status"].text == "Equipped" and screen.cards["comet"]["off"] != null, "the worn card says Equipped with Take off")
 	screen.cards["comet"]["off"].pressed.emit()
 	_check(asked.back() == "", "Take off asks for no trail")
-	var poor: DotResult = await screen.buy("royal")
+	var poor: GSResult = await screen.buy("royal")
 	_check(not poor.ok and screen.status_text().contains("points"), "a refused buy is explained on the screen")
 	screen.groups = PackedStringArray(["vip"])
 	screen.server_changed()
@@ -214,8 +214,8 @@ func _test_screen() -> void:
 	screen.free()
 
 
-func _panel() -> DotTrailUploadPanel:
-	var p := DotTrailUploadPanel.make(_host, null, DotTrailKit.new())
+func _panel() -> GSTrailUploadPanel:
+	var p := GSTrailUploadPanel.make(_host, null, GSTrailKit.new())
 	return p
 
 
@@ -249,7 +249,7 @@ func _test_upload_bad() -> void:
 	_check(not r2.ok, "a jpg is refused")
 	var big := _noise(400, 400).save_png_to_buffer()
 	var r3 := p.take("huge.png", big)
-	_check(r3.code() == DotError.CODE_QUOTA and p.error_text().contains("too large"), "a %d KB png is refused as too large" % (big.size() / 1024))
+	_check(r3.code() == GSError.CODE_QUOTA and p.error_text().contains("too large"), "a %d KB png is refused as too large" % (big.size() / 1024))
 	var wide := Image.create(600, 4, false, Image.FORMAT_RGBA8)
 	var r4 := p.take("wide.png", wide.save_png_to_buffer())
 	_check(not r4.ok and p.error_text().contains("600"), "a 600 px wide png is refused for its size")
@@ -265,19 +265,19 @@ func _test_upload_bad() -> void:
 
 func _test_submit() -> void:
 	_section("upload: submit for review")
-	var b := DotTrailBackendStub.from_registry(_registry())
-	var p := DotTrailUploadPanel.make(_host, b, DotTrailKit.new())
+	var b := GSTrailBackendStub.from_registry(_registry())
+	var p := GSTrailUploadPanel.make(_host, b, GSTrailKit.new())
 	var got: Array = []
 	p.submitted.connect(func(id: String) -> void: got.append(id))
-	var none: DotResult = await p.submit()
+	var none: GSResult = await p.submit()
 	_check(not none.ok, "nothing to submit before an image")
 	var _t := p.take("aurora.png", _noise(96, 24).save_png_to_buffer())
 	p.url_edit.text = "ftp://nope"
 	p.author_edit.text = "Tester"
-	var bad_url: DotResult = await p.submit()
+	var bad_url: GSResult = await p.submit()
 	_check(not bad_url.ok and p.error_text().contains("http"), "a non-http source is refused")
 	p.url_edit.text = "https://example.com/aurora"
-	var sent: DotResult = await p.submit()
+	var sent: GSResult = await p.submit()
 	_check(sent.ok and got == ["upload_1"], "the image goes to review as upload_1")
 	_check(b.uploads.size() == 1 and b.uploads[0]["status"] == "pending", "the store queues it as pending")
 	_check(p.info.text.contains("moderator") and p.submit_button.disabled, "the form says it waits for a moderator")

@@ -11,7 +11,7 @@ var _section_count := 0
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.FATAL)
+	GSLog.set_level(GSLog.Level.FATAL)
 	_line("dot-trail self-test")
 	_test_def()
 	_test_upload()
@@ -42,12 +42,12 @@ func _webp(w: int, h: int, lossy: bool) -> PackedByteArray:
 	return img.save_webp_to_buffer(lossy, 0.8)
 
 
-func _def(id: String, access: String = "public", groups: Array = [], price: int = 0) -> DotTrailDef:
-	return DotTrailDef.from_dict({"id": id, "image": id + ".png", "access": access, "groups": groups, "price": price}).value
+func _def(id: String, access: String = "public", groups: Array = [], price: int = 0) -> GSTrailDef:
+	return GSTrailDef.from_dict({"id": id, "image": id + ".png", "access": access, "groups": groups, "price": price}).value
 
 
-func _registry() -> DotTrailRegistry:
-	var r := DotTrailRegistry.new()
+func _registry() -> GSTrailRegistry:
+	var r := GSTrailRegistry.new()
 	r.add(_def("spark"), _png(16, 16))
 	r.add(_def("gold", "groups", ["donator"]), _png(16, 16))
 	r.add(_def("paid", "public", [], 50), _png(16, 16))
@@ -56,17 +56,17 @@ func _registry() -> DotTrailRegistry:
 
 func _test_def() -> void:
 	_section("def")
-	_check(DotTrailDef.from_dict({"id": "ok_1", "image": "a.png"}).ok, "minimal def is valid")
-	_code(DotTrailDef.from_dict({"id": "Bad", "image": "a.png"}), "invalid", "uppercase id refused")
-	_code(DotTrailDef.from_dict({"id": "a", "image": "../a.png"}), "invalid", "path in image refused")
-	_code(DotTrailDef.from_dict({"id": "a", "image": "a.gd"}), "invalid", "script extension refused")
-	_code(DotTrailDef.from_dict({"id": "a", "image": "a.png", "width": 50}), "invalid", "huge width refused")
-	_code(DotTrailDef.from_dict({"id": "a", "image": "a.png", "blend": "burn"}), "invalid", "unknown blend refused")
-	_code(DotTrailDef.from_dict({"id": "a", "image": "a.png", "access": "groups"}), "invalid", "groups access needs groups")
-	_code(DotTrailDef.from_dict({"id": "a", "image": "a.png", "price": -1}), "invalid", "negative price refused")
-	_code(DotTrailDef.from_dict({"id": "a", "image": "a.png", "color": "zzz"}), "invalid", "bad colour refused")
+	_check(GSTrailDef.from_dict({"id": "ok_1", "image": "a.png"}).ok, "minimal def is valid")
+	_code(GSTrailDef.from_dict({"id": "Bad", "image": "a.png"}), "invalid", "uppercase id refused")
+	_code(GSTrailDef.from_dict({"id": "a", "image": "../a.png"}), "invalid", "path in image refused")
+	_code(GSTrailDef.from_dict({"id": "a", "image": "a.gd"}), "invalid", "script extension refused")
+	_code(GSTrailDef.from_dict({"id": "a", "image": "a.png", "width": 50}), "invalid", "huge width refused")
+	_code(GSTrailDef.from_dict({"id": "a", "image": "a.png", "blend": "burn"}), "invalid", "unknown blend refused")
+	_code(GSTrailDef.from_dict({"id": "a", "image": "a.png", "access": "groups"}), "invalid", "groups access needs groups")
+	_code(GSTrailDef.from_dict({"id": "a", "image": "a.png", "price": -1}), "invalid", "negative price refused")
+	_code(GSTrailDef.from_dict({"id": "a", "image": "a.png", "color": "zzz"}), "invalid", "bad colour refused")
 	var d := _def("rt", "groups", ["vip"], 5)
-	var back := DotTrailDef.from_dict(d.to_dict()).value as DotTrailDef
+	var back := GSTrailDef.from_dict(d.to_dict()).value as GSTrailDef
 	_check(back.id == "rt" and back.groups == d.groups and back.price == 5, "to_dict and from_dict round trip")
 	_check(d.describe().contains("rt"), "describe names the id")
 
@@ -74,28 +74,28 @@ func _test_def() -> void:
 func _test_upload() -> void:
 	_section("upload")
 	var lim := {"max_bytes": 4096, "max_dimension": 64}
-	var ok := DotTrailUpload.validate(_png(32, 16), "a.png", lim)
+	var ok := GSTrailUpload.validate(_png(32, 16), "a.png", lim)
 	_check(ok.ok and ok.value["width"] == 32 and ok.value["height"] == 16, "png dimensions read from header")
-	var wl := DotTrailUpload.validate(_webp(20, 10, false), "a.webp", lim)
+	var wl := GSTrailUpload.validate(_webp(20, 10, false), "a.webp", lim)
 	_check(wl.ok and wl.value["width"] == 20 and wl.value["height"] == 10, "lossless webp dimensions")
-	var wy := DotTrailUpload.validate(_webp(24, 12, true), "a.webp", lim)
+	var wy := GSTrailUpload.validate(_webp(24, 12, true), "a.webp", lim)
 	_check(wy.ok and wy.value["width"] == 24 and wy.value["height"] == 12, "lossy webp dimensions")
-	_code(DotTrailUpload.validate(_png(65, 8), "a.png", lim), "invalid", "too wide refused")
-	_code(DotTrailUpload.validate(_png(64, 64), "a.png", {"max_bytes": 20, "max_dimension": 64}), "quota", "too many bytes refused")
-	_code(DotTrailUpload.validate("extends Node".to_utf8_buffer(), "a.png", lim), "invalid", "script renamed png refused")
-	_code(DotTrailUpload.validate(_png(8, 8), "a.gd", lim), "invalid", "gd extension refused")
-	_code(DotTrailUpload.validate(_png(8, 8), "a.svg", lim), "invalid", "svg refused")
-	_code(DotTrailUpload.validate(_png(8, 8), "../a.png", lim), "invalid", "path in name refused")
-	_code(DotTrailUpload.validate(_png(8, 8), "a.webp", lim), "invalid", "png bytes named webp refused")
+	_code(GSTrailUpload.validate(_png(65, 8), "a.png", lim), "invalid", "too wide refused")
+	_code(GSTrailUpload.validate(_png(64, 64), "a.png", {"max_bytes": 20, "max_dimension": 64}), "quota", "too many bytes refused")
+	_code(GSTrailUpload.validate("extends Node".to_utf8_buffer(), "a.png", lim), "invalid", "script renamed png refused")
+	_code(GSTrailUpload.validate(_png(8, 8), "a.gd", lim), "invalid", "gd extension refused")
+	_code(GSTrailUpload.validate(_png(8, 8), "a.svg", lim), "invalid", "svg refused")
+	_code(GSTrailUpload.validate(_png(8, 8), "../a.png", lim), "invalid", "path in name refused")
+	_code(GSTrailUpload.validate(_png(8, 8), "a.webp", lim), "invalid", "png bytes named webp refused")
 	var trailing := _png(8, 8)
 	trailing.append_array("extends Node".to_utf8_buffer())
-	_code(DotTrailUpload.validate(trailing, "a.png", lim), "invalid", "data after IEND refused")
+	_code(GSTrailUpload.validate(trailing, "a.png", lim), "invalid", "data after IEND refused")
 	var cut := _png(8, 8).slice(0, 40)
-	_code(DotTrailUpload.validate(cut, "a.png", lim), "invalid", "truncated png refused")
+	_code(GSTrailUpload.validate(cut, "a.png", lim), "invalid", "truncated png refused")
 	var wt := _webp(8, 8, false)
 	wt.append(0)
-	_code(DotTrailUpload.validate(wt, "a.webp", lim), "invalid", "data after webp refused")
-	_code(DotTrailUpload.validate(PackedByteArray(), "a.png", lim), "invalid", "empty refused")
+	_code(GSTrailUpload.validate(wt, "a.webp", lim), "invalid", "data after webp refused")
+	_code(GSTrailUpload.validate(PackedByteArray(), "a.png", lim), "invalid", "empty refused")
 
 
 func _test_registry() -> void:
@@ -106,30 +106,30 @@ func _test_registry() -> void:
 	_code(r.add(_def("big"), _png(600, 8)), "invalid", "oversized image refused on add")
 	_check(r.count() == 3, "failed adds change nothing")
 	var files := r.pack_files()
-	var idx := (files[DotTrailRegistry.INDEX_FILE] as PackedByteArray).get_string_from_utf8()
-	var r2 := DotTrailRegistry.new()
+	var idx := (files[GSTrailRegistry.INDEX_FILE] as PackedByteArray).get_string_from_utf8()
+	var r2 := GSTrailRegistry.new()
 	var loaded := r2.load_index(idx, files)
 	_check(loaded.ok and r2.count() == 3, "index round trip loads 3")
 	_check(r2.get_def("gold").groups == PackedStringArray(["donator"]), "groups survive the index")
 	var missing := files.duplicate()
 	missing.erase("spark.png")
-	var r3 := DotTrailRegistry.new()
+	var r3 := GSTrailRegistry.new()
 	_code(r3.load_index(idx, missing), "invalid", "index naming a missing image refused")
 	_check(r3.count() == 0, "a failed index load is all or nothing")
 	_code(r3.load_index("not json", files), "parse", "bad json refused")
 	var evil := files.duplicate()
 	evil["spark.png"] = "extends Node".to_utf8_buffer()
-	_code(DotTrailRegistry.new().load_index(idx, evil), "invalid", "pack with a script as image refused")
-	var small := DotTrailRegistry.new()
+	_code(GSTrailRegistry.new().load_index(idx, evil), "invalid", "pack with a script as image refused")
+	var small := GSTrailRegistry.new()
 	small.config.max_trails = 1
 	small.add(_def("a"), _png(8, 8))
 	_code(small.add(_def("b"), _png(8, 8)), "quota", "trail cap enforced")
 	_check(r.remove("paid") and r.count() == 2 and not r.remove("paid"), "remove works once")
 	_check(r.texture_for("nope") == null, "texture for unknown id is null")
 	r.install()
-	_check(DotTrailRegistry.current() == r, "installed through DotRegistry")
-	DotRegistry.unregister(DotTrailRegistry.SERVICE)
-	_check(DotTrailRegistry.current() == null, "unregistered")
+	_check(GSTrailRegistry.current() == r, "installed through GSRegistry")
+	GSRegistry.unregister(GSTrailRegistry.SERVICE)
+	_check(GSTrailRegistry.current() == null, "unregistered")
 	_check(r.describe_lines().size() == 3, "describe_lines lists header and trails")
 
 
@@ -137,7 +137,7 @@ func _test_equip() -> void:
 	_section("equip")
 	var r := _registry()
 	var clock := [0]
-	var e := DotTrailEquip.new(r)
+	var e := GSTrailEquip.new(r)
 	e.now_ms = func() -> int: return clock[0]
 	var seen: Array = []
 	e.changed.connect(func(p: Variant, t: String) -> void: seen.append([p, t]))
@@ -162,22 +162,22 @@ func _test_equip() -> void:
 	e.forget(2)
 	_check(e.worn(2) == "", "forget clears the player")
 	_check(seen.size() >= 6, "changed signal fired per change")
-	_check(e.describe().begins_with("DotTrailEquip"), "describe")
+	_check(e.describe().begins_with("GSTrailEquip"), "describe")
 
 
 func _test_ribbon() -> void:
 	_section("ribbon")
 	var pts := PackedVector3Array([Vector3(0, 0, 0), Vector3(1, 0, 0), Vector3(2, 0, 0)])
 	var ages := PackedFloat32Array([1.0, 0.5, 0.0])
-	var s := DotTrailRibbon.strip(pts, ages, 0.4, 1.0)
+	var s := GSTrailRibbon.strip(pts, ages, 0.4, 1.0)
 	_check(s["vertices"].size() == 6 and s["uvs"].size() == 6, "two vertices per point")
 	_check(is_equal_approx(s["vertices"][0].distance_to(s["vertices"][1]), 0.4), "strip is as wide as asked")
 	_check(is_equal_approx(s["alphas"][0], 0.0) and is_equal_approx(s["alphas"][4], 1.0), "alpha fades with age")
 	_check(is_equal_approx(s["vertices"][0].y, 0.0), "a flat path gives a flat ribbon")
-	var up := DotTrailRibbon.strip(PackedVector3Array([Vector3.ZERO, Vector3.UP]), PackedFloat32Array([0, 0]), 1.0, 1.0)
+	var up := GSTrailRibbon.strip(PackedVector3Array([Vector3.ZERO, Vector3.UP]), PackedFloat32Array([0, 0]), 1.0, 1.0)
 	_check(up["vertices"].size() == 4 and is_finite(up["vertices"][0].x), "a vertical path does not divide by zero")
-	_check(DotTrailRibbon.strip(PackedVector3Array([Vector3.ZERO]), PackedFloat32Array([0]), 1.0, 1.0)["vertices"].is_empty(), "one point draws nothing")
-	var f := DotTrailRibbon.strip(pts, ages, 0.4, 1.0, Vector3(1, 0, 5))
+	_check(GSTrailRibbon.strip(PackedVector3Array([Vector3.ZERO]), PackedFloat32Array([0]), 1.0, 1.0)["vertices"].is_empty(), "one point draws nothing")
+	var f := GSTrailRibbon.strip(pts, ages, 0.4, 1.0, Vector3(1, 0, 5))
 	_check(absf(f["vertices"][0].y - f["vertices"][1].y) > 0.3 and absf(f["vertices"][0].z) < 0.001, "an eye beside a flat path stands the ribbon up to face it")
 
 
@@ -185,7 +185,7 @@ func _test_emitter() -> void:
 	_section("emitter")
 	var player := Node3D.new()
 	add_child(player)
-	var em := DotTrailEmitter.new()
+	var em := GSTrailEmitter.new()
 	player.add_child(em)
 	em.set_trail(_def("spark"))
 	em.config.min_step = 0.5
@@ -212,12 +212,12 @@ func _test_emitter() -> void:
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	_check(em.point_count() >= 2, "physics tick follows the parent through the default DotNodeRef")
+	_check(em.point_count() >= 2, "physics tick follows the parent through the default GSNodeRef")
 	_check(em.describe().contains("spark"), "describe names the trail")
 	em.set_trail(null)
 	_check(em.point_count() == 0, "clearing the trail empties the ribbon")
-	var orphan := DotTrailEmitter.new()
-	orphan.target = DotNodeRef.of_path(NodePath("Nope"))
+	var orphan := GSTrailEmitter.new()
+	orphan.target = GSNodeRef.of_path(NodePath("Nope"))
 	add_child(orphan)
 	orphan.set_trail(_def("spark"))
 	orphan.sample(Vector3.ZERO, 0.1)
@@ -228,7 +228,7 @@ func _test_emitter() -> void:
 
 func _test_config() -> void:
 	_section("config")
-	var c := DotTrailConfig.new()
+	var c := GSTrailConfig.new()
 	_check(c.validate().ok, "defaults validate")
 	var applied := c.apply_dictionary({"max_points": 10, "min_step": 0.3})
 	_check(applied.size() == 2 and c.max_points == 10, "dictionary layer applies")
@@ -236,23 +236,23 @@ func _test_config() -> void:
 	_code(c.validate(), "invalid", "max_points of 1 refused")
 	c.max_points = -1
 	_code(c.validate(), "invalid", "a negative max_points refused")
-	var unlimited := DotTrailConfig.new()
+	var unlimited := GSTrailConfig.new()
 	unlimited.apply_dictionary({"max_points": 0, "max_trails": 0, "max_upload_bytes": 0, "max_dimension": 0, "max_width": 0.0, "max_lifetime": 0.0})
 	_check(unlimited.validate().ok, "0 (unlimited) validates for every limit")
-	_check(DotTrailUpload.validate(_png(1024, 1024), "big.png", unlimited.limits()).ok, "an unlimited config takes a 1024 px image (default limit 512)")
-	_check(DotTrailDef.from_dict({"id": "wide", "image": "w.png", "width": 50.0, "lifetime": 120.0}, unlimited.limits()).ok, "and a 50 m, 120 s trail")
-	var many := DotTrailRegistry.new()
+	_check(GSTrailUpload.validate(_png(1024, 1024), "big.png", unlimited.limits()).ok, "an unlimited config takes a 1024 px image (default limit 512)")
+	_check(GSTrailDef.from_dict({"id": "wide", "image": "w.png", "width": 50.0, "lifetime": 120.0}, unlimited.limits()).ok, "and a 50 m, 120 s trail")
+	var many := GSTrailRegistry.new()
 	many.config = unlimited
 	for i in range(300):
 		many.add(_def("t%d" % i), _png(8, 8))
 	_check(many.count() == 300, "max_trails 0 takes 300 trails (%d)" % many.count())
-	var cli := DotTrailConfig.new()
+	var cli := GSTrailConfig.new()
 	_check(cli.cli_prefix() == "--trail-" and cli.env_prefix() == "DOT_TRAIL_", "prefixes")
 	_check(cli.limits()["max_dimension"] == 512, "limits feed the upload check")
-	_check(DotTrailConfig.parse_pack("trails-x@1.0.0") == PackedStringArray(["trails-x", "1.0.0"]) and DotTrailConfig.parse_pack("owner/name@2") == PackedStringArray(["owner/name", "2"]), "pack parses <id>@<version> and <owner>/<name>@<version>")
-	var bad := ["junk", "a@b@c", "../x@1", "a/b/c@1", "@1", "x@"].filter(func(t: String) -> bool: return not DotTrailConfig.parse_pack(t).is_empty())
+	_check(GSTrailConfig.parse_pack("trails-x@1.0.0") == PackedStringArray(["trails-x", "1.0.0"]) and GSTrailConfig.parse_pack("owner/name@2") == PackedStringArray(["owner/name", "2"]), "pack parses <id>@<version> and <owner>/<name>@<version>")
+	var bad := ["junk", "a@b@c", "../x@1", "a/b/c@1", "@1", "x@"].filter(func(t: String) -> bool: return not GSTrailConfig.parse_pack(t).is_empty())
 	_check(bad.is_empty(), "malformed packs parse to nothing")
-	var p := DotTrailConfig.new()
+	var p := GSTrailConfig.new()
 	_check(p.apply_dictionary({"pack": "trails-x@1.0.0"}).size() == 1 and p.pack_parts()[1] == "1.0.0", "pack is a layered cvar")
 	p.pack = "junk"
 	_code(p.validate(), "invalid", "a malformed pack refused")
@@ -261,7 +261,7 @@ func _test_config() -> void:
 func _test_store() -> void:
 	_section("store and pack")
 	var dir := OS.get_temp_dir().path_join("dot_trail_selftest_%d" % Time.get_ticks_usec())
-	var store := DotTrailStore.new(null, dir)
+	var store := GSTrailStore.new(null, dir)
 	var meta := {"id": "flame", "title": "Flame", "licence": "CC0-1.0", "author": "Test", "url": "https://example.com/a", "access": "groups", "groups": ["donator"]}
 	var made := store.submit(meta, _png(16, 16), "x.png")
 	_check(made.ok and store.registry.get_def("flame").credit == "Test (CC0-1.0)", "a complete upload is accepted and credited")
@@ -284,25 +284,25 @@ func _test_store() -> void:
 	_check(store.save().ok and FileAccess.file_exists(dir.path_join("trails.json")) and FileAccess.file_exists(dir.path_join("licence.json")), "save writes the index, the images and licence.json")
 	var licences: Array = JSON.parse_string(store.licence_json())
 	_check(licences.size() == 2 and licences[1]["paths"] == ["flame.png"] and licences[1]["author"] == "Test", "licence.json covers every image")
-	var back := DotTrailStore.new(null, dir)
+	var back := GSTrailStore.new(null, dir)
 	_check(back.load_dir().ok and back.registry.get_def("flame").groups == PackedStringArray(["donator"]), "a store reloads with its access setting")
-	_check(DotTrailStore.new(null, dir.path_join("none")).load_dir().ok, "a missing directory is an empty store")
-	_check(DotTrailPack.content_id_for("My Server!") == "trails-my-server-", "content id is a safe slug")
+	_check(GSTrailStore.new(null, dir.path_join("none")).load_dir().ok, "a missing directory is an empty store")
+	_check(GSTrailPack.content_id_for("My Server!") == "trails-my-server-", "content id is a safe slug")
 	var out := dir.path_join("out")
-	if ResourceLoader.exists(DotTrailPack.PUBLISHER_SCRIPT):
-		var built := DotTrailPack.build(store, "trails-test", out, {"version": "1.0.0"})
+	if ResourceLoader.exists(GSTrailPack.PUBLISHER_SCRIPT):
+		var built := GSTrailPack.build(store, "trails-test", out, {"version": "1.0.0"})
 		_check(built.ok and FileAccess.file_exists(out.path_join("manifest.json")), "the store builds ONE dot-cloud pack with a manifest")
 		var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(out.path_join("manifest.json"))) if built.ok else {}
 		var paths: Array = (manifest.get("files", []) as Array).map(func(f: Dictionary) -> String: return f["path"])
 		_check(paths.has("trails.json") and paths.has("flame.png"), "the pack lists the index and the image")
-		var mounted := DotTrailRegistry.new()
-		var staged := DotTrailStore.new(mounted).load_dir(out.path_join("_source"))
+		var mounted := GSTrailRegistry.new()
+		var staged := GSTrailStore.new(mounted).load_dir(out.path_join("_source"))
 		_check(staged.ok and mounted.count() == 1, "the delivered files load back into a registry")
 	else:
 		_check(true, "dot-cloud not linked: build skipped")
 		_check(true, "dot-cloud not linked: manifest check skipped")
 		_check(true, "dot-cloud not linked: load skipped")
-	_check(DotTrailStore.new().save().code() == "invalid", "a store without a directory cannot save")
+	_check(GSTrailStore.new().save().code() == "invalid", "a store without a directory cannot save")
 
 
 func _section(name: String) -> void:
@@ -320,7 +320,7 @@ func _check(cond: bool, label: String) -> void:
 		_line("  FAIL " + label)
 
 
-func _code(res: DotResult, code: String, label: String) -> void:
+func _code(res: GSResult, code: String, label: String) -> void:
 	_check(not res.ok and res.code() == code, label + " (" + res.code() + ")" if not res.ok else label + " (succeeded)")
 
 

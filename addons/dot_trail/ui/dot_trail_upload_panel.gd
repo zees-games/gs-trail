@@ -1,18 +1,18 @@
-class_name DotTrailUploadPanel
+class_name GSTrailUploadPanel
 extends PanelContainer
 
-## Send your own trail: pick an image, see it checked by [DotTrailUpload.validate] and drawn as a ribbon, fill in the rights, submit it for review.
+## Send your own trail: pick an image, see it checked by [GSTrailUpload.validate] and drawn as a ribbon, fill in the rights, submit it for review.
 
 signal submitted(id: String)
 
-var backend: DotTrailBackend = null
-var limits: Dictionary = DotTrailConfig.new().limits()
-var picker: DotTrailFilePick = null
+var backend: GSTrailBackend = null
+var limits: Dictionary = GSTrailConfig.new().limits()
+var picker: GSTrailFilePick = null
 var file_name := ""
 var bytes := PackedByteArray()
 var valid := false
 
-var preview: DotTrailPreview = null
+var preview: GSTrailPreview = null
 var info: Label = null
 var error_label: Label = null
 ## What the form still needs before Submit turns on.
@@ -23,11 +23,11 @@ var author_edit: LineEdit = null
 var url_edit: LineEdit = null
 var submit_button: Button = null
 var choose_button: Button = null
-var k: DotTrailKit = null
+var k: GSTrailKit = null
 
 
-static func make(parent: Control, p_backend: DotTrailBackend, kit: DotTrailKit) -> DotTrailUploadPanel:
-	var p := DotTrailUploadPanel.new()
+static func make(parent: Control, p_backend: GSTrailBackend, kit: GSTrailKit) -> GSTrailUploadPanel:
+	var p := GSTrailUploadPanel.new()
 	p.name = "Upload"
 	p.backend = p_backend
 	p.k = kit
@@ -40,7 +40,7 @@ static func make(parent: Control, p_backend: DotTrailBackend, kit: DotTrailKit) 
 
 
 func _build() -> void:
-	picker = DotTrailFilePick.new()
+	picker = GSTrailFilePick.new()
 	picker.name = "Picker"
 	picker.picked.connect(take)
 	picker.failed.connect(func(message: String) -> void: _error(message))
@@ -51,7 +51,7 @@ func _build() -> void:
 	var left := VBoxContainer.new()
 	left.add_theme_constant_override(&"separation", 8)
 	row.add_child(left)
-	preview = DotTrailPreview.new()
+	preview = GSTrailPreview.new()
 	preview.custom_minimum_size = Vector2(240, 130)
 	preview.dim = true
 	left.add_child(preview)
@@ -69,7 +69,7 @@ func _build() -> void:
 	row.add_child(form)
 	title_edit = _field(form, "Name", "Comet tail")
 	licence = OptionButton.new()
-	for l: String in DotTrailStore.LICENCES:
+	for l: String in GSTrailStore.LICENCES:
 		licence.add_item(l)
 	form.add_child(k.label("Licence", true, "muted"))
 	form.add_child(licence)
@@ -96,10 +96,10 @@ func _field(form: Control, label: String, hint: String) -> LineEdit:
 
 
 ## A picked file: checked, then previewed. Returns the check.
-func take(p_name: String, p_bytes: PackedByteArray) -> DotResult:
+func take(p_name: String, p_bytes: PackedByteArray) -> GSResult:
 	file_name = p_name
 	bytes = p_bytes
-	var checked := DotTrailUpload.validate(p_bytes, p_name, limits)
+	var checked := GSTrailUpload.validate(p_bytes, p_name, limits)
 	valid = checked.ok
 	if not checked.ok:
 		_error(_explain(checked))
@@ -121,26 +121,26 @@ func take(p_name: String, p_bytes: PackedByteArray) -> DotResult:
 
 
 ## Sends the image and the rights for review. Awaitable.
-func submit() -> DotResult:
+func submit() -> GSResult:
 	if not valid:
-		return DotResult.fail(DotError.CODE_INVALID, "no valid image")
+		return GSResult.fail(GSError.CODE_INVALID, "no valid image")
 	var missing := _missing()
 	if not missing.is_empty():
 		_error(missing)
-		return DotResult.fail(DotError.CODE_INVALID, missing)
+		return GSResult.fail(GSError.CODE_INVALID, missing)
 	if backend == null:
 		_error("The trail store is not available.")
-		return DotResult.fail(DotError.CODE_STATE, "no trail store")
+		return GSResult.fail(GSError.CODE_STATE, "no trail store")
 	submit_button.disabled = true
 	submit_button.text = "Sending…"
 	var meta := {"title": title_edit.text.strip_edges(), "licence": licence.get_item_text(licence.selected),
 		"author": author_edit.text.strip_edges(), "url": url_edit.text.strip_edges()}
-	var res: DotResult = await backend.submit_upload(meta, bytes, file_name)
+	var res: GSResult = await backend.submit_upload(meta, bytes, file_name)
 	if not is_instance_valid(self):
 		return res
 	submit_button.text = "Submit for review"
 	if not res.ok:
-		_error(DotTrailBackend.explain(res))
+		_error(GSTrailBackend.explain(res))
 		_update_submit()
 		return res
 	_error("")
@@ -178,9 +178,9 @@ func _error(text: String) -> void:
 
 
 ## The validator's sentence, made a player's.
-func _explain(res: DotResult) -> String:
+func _explain(res: GSResult) -> String:
 	match res.code():
-		DotError.CODE_QUOTA:
+		GSError.CODE_QUOTA:
 			return "That file is too large: %s." % res.error.message
 	return "That image cannot be used: %s." % res.error.message
 

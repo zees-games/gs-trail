@@ -2,20 +2,20 @@
 
 ## What it is
 
-A trail is an image that follows a player as they move. Operators upload trails, choose who may wear them, and every client downloads the whole set as one pack before joining. Players equip one; the server decides whether they may. The addon is game-agnostic: it attaches to any node through a `DotNodeRef`.
+A trail is an image that follows a player as they move. Operators upload trails, choose who may wear them, and every client downloads the whole set as one pack before joining. Players equip one; the server decides whether they may. The addon is game-agnostic: it attaches to any node through a `GSNodeRef`.
 
 ## Reuse map
 
 | Need | Already exists | New here |
 | --- | --- | --- |
-| Pack delivery to clients | dot-cloud: signed manifest, content-addressed cache, mount before join. A trail set is one pack whose files are images plus `trails.json`; `DotTrailRegistry.to_index()` writes the index and lists the files | the index format, nothing about download |
-| Operator upload UI and identity | dot-workbench (`DotWorkbenchIdentity`, panel, publish). Trails are a profile section, like wearables | `DotTrailUpload.validate()`, a pure function the workbench form calls |
-| Groups and permissions | dot-user profile and scope carry the player's groups; the server passes the group list in | `access` field on a def and `DotTrailRegistry.may_equip()` |
-| Owning something | dot-inventory for item ownership, dot-economy sells ids and grants nothing | trails are ids; a purchase is an entitlement list the backend returns, handed to `DotTrailEquip` |
+| Pack delivery to clients | dot-cloud: signed manifest, content-addressed cache, mount before join. A trail set is one pack whose files are images plus `trails.json`; `GSTrailRegistry.to_index()` writes the index and lists the files | the index format, nothing about download |
+| Operator upload UI and identity | dot-workbench (`GSWorkbenchIdentity`, panel, publish). Trails are a profile section, like wearables | `GSTrailUpload.validate()`, a pure function the workbench form calls |
+| Groups and permissions | dot-user profile and scope carry the player's groups; the server passes the group list in | `access` field on a def and `GSTrailRegistry.may_equip()` |
+| Owning something | dot-inventory for item ownership, dot-economy sells ids and grants nothing | trails are ids; a purchase is an entitlement list the backend returns, handed to `GSTrailEquip` |
 | Particles and decals | dot-fx, dot-effects | not used: a ribbon is one mesh per wearer, cheaper than a particle system and identical headless |
-| Config, logging, errors | dot-core `DotConfig`, `DotLog`, `DotResult`, `DotRegistry`, `DotNodeRef` | cvars, channel `trail` |
+| Config, logging, errors | dot-core `GSConfig`, `GSLog`, `GSResult`, `GSRegistry`, `GSNodeRef` | cvars, channel `trail` |
 
-## Data model: `DotTrailDef`
+## Data model: `GSTrailDef`
 
 | Field | Meaning |
 | --- | --- |
@@ -31,49 +31,49 @@ A trail is an image that follows a player as they move. Operators upload trails,
 
 ## Equip is server-authoritative
 
-The client sends `equip(id)`. The server runs `DotTrailEquip.equip(player_id, id, groups, entitlements)`: the id must exist, the def must be public, or the player in one of its groups, or the id in the backend's entitlement list. A refusal is a `DotResult` with `forbidden` or `invalid`. The server stores the choice and replicates only the id; a client can never wear a trail it was not allowed, and an unknown id on the wire is ignored, not loaded. Unequip is `equip("")`. Equip is rate limited by the `trail_equip_cooldown` cvar.
+The client sends `equip(id)`. The server runs `GSTrailEquip.equip(player_id, id, groups, entitlements)`: the id must exist, the def must be public, or the player in one of its groups, or the id in the backend's entitlement list. A refusal is a `GSResult` with `forbidden` or `invalid`. The server stores the choice and replicates only the id; a client can never wear a trail it was not allowed, and an unknown id on the wire is ignored, not loaded. Unequip is `equip("")`. Equip is rate limited by the `trail_equip_cooldown` cvar.
 
 ## One pack before join
 
-All defs and images of a server ship as a single dot-cloud pack (`trails/<hash>`), so a join is one download, cached by content. The pack carries images and JSON only. `DotTrailUpload.validate()` refuses scripts, other types and anything oversized at upload time, and `DotTrailRegistry.load_index()` refuses an index naming a file with a different extension, so a pack cannot smuggle code through this addon. Images are loaded with `Image.load_from_buffer`, never as resources.
+All defs and images of a server ship as a single dot-cloud pack (`trails/<hash>`), so a join is one download, cached by content. The pack carries images and JSON only. `GSTrailUpload.validate()` refuses scripts, other types and anything oversized at upload time, and `GSTrailRegistry.load_index()` refuses an index naming a file with a different extension, so a pack cannot smuggle code through this addon. Images are loaded with `Image.load_from_buffer`, never as resources.
 
 ## Upload validation (pure)
 
-`validate(bytes, name, limits)` checks: extension `png` or `webp` and matching magic bytes (so a renamed script fails), byte size, pixel dimensions read from the header without decoding the full image, and no trailing data after the PNG IEND chunk. It returns a `DotResult` whose value is `{type, width, height, bytes}`. Licence is a human decision: the upload form requires a `licence` string and `author`, kept in the def's `credit` field, and the addon ships no art.
+`validate(bytes, name, limits)` checks: extension `png` or `webp` and matching magic bytes (so a renamed script fails), byte size, pixel dimensions read from the header without decoding the full image, and no trailing data after the PNG IEND chunk. It returns a `GSResult` whose value is `{type, width, height, bytes}`. Licence is a human decision: the upload form requires a `licence` string and `author`, kept in the def's `credit` field, and the addon ships no art.
 
 ## Emitter
 
-`DotTrailEmitter` (Node3D) resolves a `DotNodeRef` to the player node and samples its global position each physics tick. A point is added once the target moved `trail_min_step`; points older than `lifetime` are dropped; the count is capped (`trail_max_points`). The ribbon is an `ImmediateMesh` rebuilt per frame only when it changed, and not at all when `DisplayServer` is headless (the point list is still kept, so tests and servers see the same data). Distance culling and a global on/off cvar (`trail_enabled`) are for low-end clients.
+`GSTrailEmitter` (Node3D) resolves a `GSNodeRef` to the player node and samples its global position each physics tick. A point is added once the target moved `trail_min_step`; points older than `lifetime` are dropped; the count is capped (`trail_max_points`). The ribbon is an `ImmediateMesh` rebuilt per frame only when it changed, and not at all when `DisplayServer` is headless (the point list is still kept, so tests and servers see the same data). Distance culling and a global on/off cvar (`trail_enabled`) are for low-end clients.
 
 ## Store integration contract (built, website-city branch `task/dot-trail-store`)
 
-The TMC backend owns prices, purchases and entitlements. `DotTrailBackendHttp` follows these routes; every path and the player query parameter is a field, set from `trail.yml` keys `trail_{catalog,equipped,purchase,uploads,server_catalog,entitlements}_path` and `trail_player_param` through `apply_config`.
+The TMC backend owns prices, purchases and entitlements. `GSTrailBackendHttp` follows these routes; every path and the player query parameter is a field, set from `trail.yml` keys `trail_{catalog,equipped,purchase,uploads,server_catalog,entitlements}_path` and `trail_player_param` through `apply_config`.
 
 1. Player token (the client's app session): `GET /api/app/v1/trails` lists `{trails: [{id, title, price | price_points, owned, image_url | preview_url, sku}], points | balance, equipped}`; `PUT /api/app/v1/trails {id, game?}` sets what is worn (`""` takes it off; `game` makes it per-game, absent is site-wide); `POST /api/app/v1/trails/purchase {id, sku, purchase_id}` debits points and answers the owned ids and the new balance (`ids | owned | trails`, `points | balance`).
-2. Server key (the game server's integration token, never logged): `GET /api/integration/v1/trails/catalog` returns DotTrailDef dicts with `image_url`, `sha256`, `sku`; `GET /api/integration/v1/trails/entitlements?player=<key>` returns the trails the player may use (`trails`, strings or `{id}`) and `equipped`. The game server passes the ids to `DotTrailEquip`.
-3. Refusals reach the UI through `DotTrailBackend.explain`: `insufficient_points` and "Need N more Points", `not_entitled`, `pending_moderation`, `already_owned`, `unauthorized`.
-4. `uploads_path` (`POST`, player token) queues an image for moderation; the site re-runs the checks of `DotTrailUpload.validate` (PNG or WebP by magic bytes, 256 KB, 512 px, nothing after the image). The route is still ours to confirm with the site.
+2. Server key (the game server's integration token, never logged): `GET /api/integration/v1/trails/catalog` returns GSTrailDef dicts with `image_url`, `sha256`, `sku`; `GET /api/integration/v1/trails/entitlements?player=<key>` returns the trails the player may use (`trails`, strings or `{id}`) and `equipped`. The game server passes the ids to `GSTrailEquip`.
+3. Refusals reach the UI through `GSTrailBackend.explain`: `insufficient_points` and "Need N more Points", `not_entitled`, `pending_moderation`, `already_owned`, `unauthorized`.
+4. `uploads_path` (`POST`, player token) queues an image for moderation; the site re-runs the checks of `GSTrailUpload.validate` (PNG or WebP by magic bytes, 256 KB, 512 px, nothing after the image). The route is still ours to confirm with the site.
 
 5. Operators publish trails from dot-workbench; website-city stores the metadata row (id, owner server, access, price, licence, author) and the image on the CDN. A trail priced above 0 is only listed when the owner passes the store review.
-6. Preview: the store page loads the trail image from `preview_url` and renders the ribbon with the same maths (`DotTrailRibbon.strip(points, ages, width, lifetime)` is deterministic and has no node dependency, so a web preview is a small JS port or the web build running `DotTrailEmitter` on a scripted path).
-7. The server never trusts a client's claim of ownership; only item 2 counts. A request the cached list would refuse first refetches it (`DotTrailEnvelope.serve`'s `refresh_fn`), so a trail bought a moment ago can be worn at once.
+6. Preview: the store page loads the trail image from `preview_url` and renders the ribbon with the same maths (`GSTrailRibbon.strip(points, ages, width, lifetime)` is deterministic and has no node dependency, so a web preview is a small JS port or the web build running `GSTrailEmitter` on a scripted path).
+7. The server never trusts a client's claim of ownership; only item 2 counts. A request the cached list would refuse first refetches it (`GSTrailEnvelope.serve`'s `refresh_fn`), so a trail bought a moment ago can be worn at once.
 
 ## Phase 2 (built)
 
 ![A runner with two trails, rendered by tools/screenshot.sh](trail-shot.png)
 
-The store directory is the pack source (`DotTrailStore`), the workbench routes write it (`DotTrailWorkbench`), `DotTrailPack.build` or `publish_pack.sh` turns it into one pack, the server advertises `sv_trail_pack`, and dot-game's `DotGamePrejoin.extra_steps` fetches it before the join. The equipped id travels in `DotTrailMessage`, checked by `DotTrailRelay` through `DotTrailEquip`.
+The store directory is the pack source (`GSTrailStore`), the workbench routes write it (`GSTrailWorkbench`), `GSTrailPack.build` or `publish_pack.sh` turns it into one pack, the server advertises `sv_trail_pack`, and dot-game's `GSGamePrejoin.extra_steps` fetches it before the join. The equipped id travels in `GSTrailMessage`, checked by `GSTrailRelay` through `GSTrailEquip`.
 
 ## Phase 3 (built): the store in the game
 
 ![The Trails page in the game menu, stub store](trail-store.png)
 
-`DotTrailMenu.add_to(menu, setup)` puts a Trails page into dot-menu: a grid of every trail with a live ribbon preview (`DotTrailPreview`, the same strip maths flattened to the screen), its price, and Buy, Equip or Take off; members-only trails show their group. Below it the upload form (`DotTrailUploadPanel`) picks an image (`DotTrailFilePick`: a FileDialog on desktop, the browser's file input through `DotWeb` on the web), validates it with `DotTrailUpload.validate`, previews it and submits it for review. The store is a `DotTrailBackend`: `DotTrailBackendHttp` for the site (HTTPRequest through `DotHttp`, so it runs in a browser), `DotTrailBackendStub` for tests and offline play (it saves to `user://` and calls `DotWeb.sync_filesystem()`).
+`GSTrailMenu.add_to(menu, setup)` puts a Trails page into dot-menu: a grid of every trail with a live ribbon preview (`GSTrailPreview`, the same strip maths flattened to the screen), its price, and Buy, Equip or Take off; members-only trails show their group. Below it the upload form (`GSTrailUploadPanel`) picks an image (`GSTrailFilePick`: a FileDialog on desktop, the browser's file input through `GSWeb` on the web), validates it with `GSTrailUpload.validate`, previews it and submits it for review. The store is a `GSTrailBackend`: `GSTrailBackendHttp` for the site (HTTPRequest through `GSHttp`, so it runs in a browser), `GSTrailBackendStub` for tests and offline play (it saves to `user://` and calls `GSWeb.sync_filesystem()`).
 
-Wear requests travel on a dot-server envelope kind, `dot.trail` (`DotTrailEnvelope`), so a game needs no netcode change: the server registers it with `serve(server, relay, refresh_fn)`, a client with `attach(link, client)` before the link connects. dot-server-deploy installs both halves (`TmcTrail` on the host, `TmcTrailLink` in the shell), and dot-game's `DotGameClientAvatars.figure_of` (API 34) tells the client where each player's figure is.
+Wear requests travel on a dot-server envelope kind, `dot.trail` (`GSTrailEnvelope`), so a game needs no netcode change: the server registers it with `serve(server, relay, refresh_fn)`, a client with `attach(link, client)` before the link connects. dot-server-deploy installs both halves (`TmcTrail` on the host, `TmcTrailLink` in the shell), and dot-game's `GSGameClientAvatars.figure_of` (API 34) tells the client where each player's figure is.
 
 `tools/screenshot_ui.sh <prefix>` renders the page and the upload form; `examples/ui_selftest.tscn` checks the transport, the stub store, the screen, and good and bad uploads.
 
 ## Not built here
 
-Credits as a currency, and a browser file picker shared in dot-core rather than this addon's own (`DotTrailFilePick` is dialog plus browser input plus validation hooks, too large to move in a pin change). Each is a follow-up on the nightly board.
+Credits as a currency, and a browser file picker shared in dot-core rather than this addon's own (`GSTrailFilePick` is dialog plus browser input plus validation hooks, too large to move in a pin change). Each is a follow-up on the nightly board.

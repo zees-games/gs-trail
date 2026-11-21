@@ -1,4 +1,4 @@
-class_name DotTrailClient
+class_name GSTrailClient
 extends RefCounted
 
 ## The client half of player trails: asks the server to equip, and draws a ribbon behind every player the server says wears one. Trail ids are all that arrives; an id the loaded pack does not know draws nothing.
@@ -6,43 +6,43 @@ extends RefCounted
 const CHANNEL := "trail"
 ## The server rule advertising its trail pack as "<content id>@<version>".
 const PACK_CVAR := "sv_trail_pack"
-## dot-server's DotConVar.FLAG_NOTIFY (notify cvars are the query rules), copied so this file parses without dot-server; net_selftest checks the two agree.
+## dot-server's GSConVar.FLAG_NOTIFY (notify cvars are the query rules), copied so this file parses without dot-server; net_selftest checks the two agree.
 const NOTIFY_FLAG := 1 << 3
 const EMITTER_SCRIPT := "res://addons/dot_trail/dot_trail_emitter.gd"
 const EMITTER_META := &"dot_trail_emitter"
 
 signal changed(actor: int, id: String)
 
-## A dot-trail DotTrailRegistry, filled by the pack (see [method fetch_pack]).
+## A dot-trail GSTrailRegistry, filled by the pack (see [method fetch_pack]).
 var registry: Object
 ## func(actor: int) -> Node3D: the figure to follow, or null when it is not in the scene yet.
 var node_for: Callable = Callable()
 ## actor peer id -> trail id.
 var worn: Dictionary = {}
 
-## func(id: String) -> bool: replaces the net for [method request] (see DotTrailEnvelope).
+## func(id: String) -> bool: replaces the net for [method request] (see GSTrailEnvelope).
 var send_fn: Callable = Callable()
-var _net: DotNetManager = null
+var _net: GSNetManager = null
 
 
 ## Registers the type and listens. Call before the schema is sealed.
-func attach(net: DotNetManager, p_registry: Object) -> DotResult:
-	var made := DotTrailMessage.register(net)
+func attach(net: GSNetManager, p_registry: Object) -> GSResult:
+	var made := GSTrailMessage.register(net)
 	if not made.ok:
 		return made
 	_net = net
 	registry = p_registry
-	return net.messages.on(DotTrailMessage.NAME, _on_message)
+	return net.messages.on(GSTrailMessage.NAME, _on_message)
 
 
 ## Asks the server to wear [param id] ("" takes it off). The server decides; the answer arrives as [signal changed].
-func request(id: String) -> DotResult:
+func request(id: String) -> GSResult:
 	if send_fn.is_valid():
 		var sent: bool = send_fn.call(id)
-		return DotResult.success(id) if sent else DotResult.fail(DotError.CODE_STATE, "trail request not sent")
+		return GSResult.success(id) if sent else GSResult.fail(GSError.CODE_STATE, "trail request not sent")
 	if _net == null:
-		return DotResult.fail(DotError.CODE_STATE, "trail client is not attached")
-	var m := DotTrailMessage.new()
+		return GSResult.fail(GSError.CODE_STATE, "trail client is not attached")
+	var m := GSTrailMessage.new()
 	m.id = id
 	return _net.send(m)
 
@@ -66,7 +66,7 @@ func apply_missing() -> int:
 
 ## "<id>@<version>" from the server's rules, or an empty array.
 static func pack_from_rules(rules: Dictionary) -> PackedStringArray:
-	return DotTrailConfig.parse_pack(String(rules.get(PACK_CVAR, "")))
+	return GSTrailConfig.parse_pack(String(rules.get(PACK_CVAR, "")))
 
 
 ## The rule value for a published pack: what [method advertise] puts in [constant PACK_CVAR].
@@ -74,43 +74,43 @@ static func pack_rule(content_id: String, version: String) -> String:
 	return "%s@%s" % [content_id, version]
 
 
-## The server half: registers [constant PACK_CVAR] on a dot-server console registry (duck-typed, `cvar(name, value, description, flags)`) as a notify cvar, so the query rules carry it to a joining client. Success holds the DotConVar; set its value again after publishing a new pack version. An empty [member DotTrailConfig.pack] registers nothing and succeeds with null.
-static func advertise(console: Object, config: DotTrailConfig) -> DotResult:
+## The server half: registers [constant PACK_CVAR] on a dot-server console registry (duck-typed, `cvar(name, value, description, flags)`) as a notify cvar, so the query rules carry it to a joining client. Success holds the GSConVar; set its value again after publishing a new pack version. An empty [member GSTrailConfig.pack] registers nothing and succeeds with null.
+static func advertise(console: Object, config: GSTrailConfig) -> GSResult:
 	if config == null:
-		return DotResult.fail(DotError.CODE_INVALID, "trail advertise: no config")
+		return GSResult.fail(GSError.CODE_INVALID, "trail advertise: no config")
 	var valid := config.validate()
 	if not valid.ok:
 		return valid
 	var value := config.pack.strip_edges()
 	if value.is_empty():
-		return DotResult.success(null)
+		return GSResult.success(null)
 	if console == null or not console.has_method(&"cvar"):
-		return DotResult.fail(DotError.CODE_UNSUPPORTED, "trail advertise: no console to register %s on" % PACK_CVAR)
+		return GSResult.fail(GSError.CODE_UNSUPPORTED, "trail advertise: no console to register %s on" % PACK_CVAR)
 	var cv: Object = console.call(&"cvar", PACK_CVAR, value, "The trail pack a client downloads before it joins, <content id>@<version>.", NOTIFY_FLAG)
 	if cv == null:
-		return DotResult.fail(DotError.CODE_STATE, "trail advertise: %s was not registered" % PACK_CVAR)
-	return DotResult.success(cv)
+		return GSResult.fail(GSError.CODE_STATE, "trail advertise: %s was not registered" % PACK_CVAR)
+	return GSResult.success(cv)
 
 
-## The pre-join step: ensures the server's one trail pack through a DotCloudClient (duck-typed) and loads it into [member registry]. Success holds the trail count; a failure means join without trails.
-func fetch_pack(cloud: Object, rules: Dictionary) -> DotResult:
+## The pre-join step: ensures the server's one trail pack through a GSCloudClient (duck-typed) and loads it into [member registry]. Success holds the trail count; a failure means join without trails.
+func fetch_pack(cloud: Object, rules: Dictionary) -> GSResult:
 	var pack := pack_from_rules(rules)
 	if pack.is_empty():
-		return DotResult.success(0)
+		return GSResult.success(0)
 	var pack_script := load("res://addons/dot_trail/dot_trail_pack.gd") as GDScript
 	if pack_script == null or registry == null:
-		return DotResult.fail(DotError.CODE_UNSUPPORTED, "dot-trail is not linked")
-	var res: DotResult = await pack_script.call(&"fetch", cloud, pack[0], pack[1], registry)
+		return GSResult.fail(GSError.CODE_UNSUPPORTED, "dot-trail is not linked")
+	var res: GSResult = await pack_script.call(&"fetch", cloud, pack[0], pack[1], registry)
 	if res.ok:
 		refresh()
 	else:
-		DotLog.warn(CHANNEL, "trail pack fetch failed, joining without trails", {"code": res.code()})
+		GSLog.warn(CHANNEL, "trail pack fetch failed, joining without trails", {"code": res.code()})
 	return res
 
 
 ## The server says [param actor] now wears [param id] ("" none).
 func receive(actor: int, id: String) -> void:
-	if actor <= 0 or not DotTrailMessage.valid_wire_id(id):
+	if actor <= 0 or not GSTrailMessage.valid_wire_id(id):
 		return
 	if id.is_empty():
 		worn.erase(actor)
@@ -120,8 +120,8 @@ func receive(actor: int, id: String) -> void:
 	changed.emit(actor, id)
 
 
-func _on_message(message: DotNetMessage) -> void:
-	var m := message as DotTrailMessage
+func _on_message(message: GSNetMessage) -> void:
+	var m := message as GSTrailMessage
 	if m != null:
 		receive(m.actor, m.id)
 

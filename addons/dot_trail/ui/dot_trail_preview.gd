@@ -1,7 +1,7 @@
-class_name DotTrailPreview
+class_name GSTrailPreview
 extends Control
 
-## A trail drawn live on a looping path: the same [DotTrailRibbon.strip] maths as in the world, flattened to the screen, so a store card shows what a player will wear.
+## A trail drawn live on a looping path: the same [GSTrailRibbon.strip] maths as in the world, flattened to the screen, so a store card shows what a player will wear.
 
 ## Pixels per metre of ribbon width.
 const PX_PER_M := 46.0
@@ -20,7 +20,7 @@ var dim: bool = false
 
 
 ## Takes a def and the texture its pack image makes (null draws the colour only).
-func show_trail(def: DotTrailDef, tex: Texture2D) -> void:
+func show_trail(def: GSTrailDef, tex: Texture2D) -> void:
 	texture = tex
 	color = def.color if def != null else Color.WHITE
 	width_m = def.width if def != null else 0.4
@@ -55,7 +55,7 @@ func geometry() -> Dictionary:
 		pts.append(Vector3(p.x, p.y, 0.0))
 		ages.append(age)
 	var eye := Vector3(size.x * 0.5, size.y * 0.5, 100000.0)
-	var s: Dictionary = DotTrailRibbon.strip(pts, ages, clampf(width_m, 0.05, 2.0) * PX_PER_M, span, eye)
+	var s: Dictionary = GSTrailRibbon.strip(pts, ages, clampf(width_m, 0.05, 2.0) * PX_PER_M, span, eye)
 	var flat := PackedVector2Array()
 	for v: Vector3 in s["vertices"]:
 		flat.append(Vector2(v.x, v.y))

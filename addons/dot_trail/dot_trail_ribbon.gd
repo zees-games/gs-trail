@@ -1,4 +1,4 @@
-class_name DotTrailRibbon
+class_name GSTrailRibbon
 extends RefCounted
 
 ## Ribbon geometry as a pure function of points and ages, so the emitter, a test and a store preview agree.
