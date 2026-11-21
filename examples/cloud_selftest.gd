@@ -1,10 +1,10 @@
 extends Node
 
-## The trail pack flow end to end with the real addons: a store is built into one signed dot-cloud pack, a dot-server console advertises it as `sv_trail_pack`, and a started GSCloudClient fetches, verifies and mounts it before join (through GSGamePrejoin.extra_steps). No network: the CDN is a local directory, read through dot-cloud's local source.
+## The trail pack flow end to end with the real addons: a store is built into one signed gs-cloud pack, a gs-server console advertises it as `sv_trail_pack`, and a started GSCloudClient fetches, verifies and mounts it before join (through GSGamePrejoin.extra_steps). No network: the CDN is a local directory, read through gs-cloud's local source.
 
 const SECTIONS := 4
 const CHECKS := 17
-const CONSOLE_SCRIPT := "res://addons/dot_server/console/dot_console_registry.gd"
+const CONSOLE_SCRIPT := "res://addons/gs_server/console/gs_console_registry.gd"
 const PACK_ID := "trails-e2e"
 const VERSION := "1.0.0"
 
@@ -18,8 +18,8 @@ var _keys := {}
 
 func _ready() -> void:
 	GSLog.set_level(GSLog.Level.FATAL)
-	_line("dot-trail cloud self-test")
-	_work = OS.get_temp_dir().path_join("dot_trail_cloud_%d" % Time.get_ticks_usec())
+	_line("gs-trail cloud self-test")
+	_work = OS.get_temp_dir().path_join("gs_trail_cloud_%d" % Time.get_ticks_usec())
 	_cdn = _work.path_join("cdn")
 	_test_build()
 	var rules := _test_advertise()
@@ -60,12 +60,12 @@ func _test_advertise() -> Dictionary:
 	_section("advertise")
 	var config := GSTrailConfig.new()
 	config.pack = GSTrailClient.pack_rule(PACK_ID, VERSION)
-	_check(GSTrailClient.NOTIFY_FLAG == GSConVar.FLAG_NOTIFY, "the copied notify flag is dot-server's")
+	_check(GSTrailClient.NOTIFY_FLAG == GSConVar.FLAG_NOTIFY, "the copied notify flag is gs-server's")
 	var console: Node = (load(CONSOLE_SCRIPT) as GDScript).new()
 	var made := GSTrailClient.advertise(console, config)
 	var cv := made.value as GSConVar if made.ok else null
 	_check(cv != null and cv.name == GSTrailClient.PACK_CVAR and cv.has_flag(GSConVar.FLAG_NOTIFY), "the server registers sv_trail_pack as a notify cvar")
-	# What dot-server-query publishes: every notify (or replicated) cvar that is not protected or hidden.
+	# What gs-server-query publishes: every notify (or replicated) cvar that is not protected or hidden.
 	var rules := {}
 	for name in console.call(&"cvar_names"):
 		var c: GSConVar = console.call(&"find_cvar", name)
@@ -120,7 +120,7 @@ func _test_fetch(rules: Dictionary) -> void:
 	_check(registry.get_def("gold") != null and registry.get_def("gold").groups == PackedStringArray(["donator"]), "access settings survive delivery")
 	var tex := registry.texture_for("gold")
 	_check(tex != null and tex.get_width() == 32 and tex.get_height() == 16, "an image arrives intact and loads from bytes")
-	_check(cloud.is_mounted(StringName(PACK_ID), VERSION), "dot-cloud reports the pack mounted")
+	_check(cloud.is_mounted(StringName(PACK_ID), VERSION), "gs-cloud reports the pack mounted")
 	remove_child(cloud)
 	cloud.queue_free()
 

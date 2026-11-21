@@ -1,4 +1,4 @@
-# dot-trail design
+# gs-trail design
 
 ## What it is
 
@@ -8,12 +8,12 @@ A trail is an image that follows a player as they move. Operators upload trails,
 
 | Need | Already exists | New here |
 | --- | --- | --- |
-| Pack delivery to clients | dot-cloud: signed manifest, content-addressed cache, mount before join. A trail set is one pack whose files are images plus `trails.json`; `GSTrailRegistry.to_index()` writes the index and lists the files | the index format, nothing about download |
-| Operator upload UI and identity | dot-workbench (`GSWorkbenchIdentity`, panel, publish). Trails are a profile section, like wearables | `GSTrailUpload.validate()`, a pure function the workbench form calls |
-| Groups and permissions | dot-user profile and scope carry the player's groups; the server passes the group list in | `access` field on a def and `GSTrailRegistry.may_equip()` |
-| Owning something | dot-inventory for item ownership, dot-economy sells ids and grants nothing | trails are ids; a purchase is an entitlement list the backend returns, handed to `GSTrailEquip` |
-| Particles and decals | dot-fx, dot-effects | not used: a ribbon is one mesh per wearer, cheaper than a particle system and identical headless |
-| Config, logging, errors | dot-core `GSConfig`, `GSLog`, `GSResult`, `GSRegistry`, `GSNodeRef` | cvars, channel `trail` |
+| Pack delivery to clients | gs-cloud: signed manifest, content-addressed cache, mount before join. A trail set is one pack whose files are images plus `trails.json`; `GSTrailRegistry.to_index()` writes the index and lists the files | the index format, nothing about download |
+| Operator upload UI and identity | gs-workbench (`GSWorkbenchIdentity`, panel, publish). Trails are a profile section, like wearables | `GSTrailUpload.validate()`, a pure function the workbench form calls |
+| Groups and permissions | gs-user profile and scope carry the player's groups; the server passes the group list in | `access` field on a def and `GSTrailRegistry.may_equip()` |
+| Owning something | gs-inventory for item ownership, gs-economy sells ids and grants nothing | trails are ids; a purchase is an entitlement list the backend returns, handed to `GSTrailEquip` |
+| Particles and decals | gs-fx, gs-effects | not used: a ribbon is one mesh per wearer, cheaper than a particle system and identical headless |
+| Config, logging, errors | gs-core `GSConfig`, `GSLog`, `GSResult`, `GSRegistry`, `GSNodeRef` | cvars, channel `trail` |
 
 ## Data model: `GSTrailDef`
 
@@ -35,7 +35,7 @@ The client sends `equip(id)`. The server runs `GSTrailEquip.equip(player_id, id,
 
 ## One pack before join
 
-All defs and images of a server ship as a single dot-cloud pack (`trails/<hash>`), so a join is one download, cached by content. The pack carries images and JSON only. `GSTrailUpload.validate()` refuses scripts, other types and anything oversized at upload time, and `GSTrailRegistry.load_index()` refuses an index naming a file with a different extension, so a pack cannot smuggle code through this addon. Images are loaded with `Image.load_from_buffer`, never as resources.
+All defs and images of a server ship as a single gs-cloud pack (`trails/<hash>`), so a join is one download, cached by content. The pack carries images and JSON only. `GSTrailUpload.validate()` refuses scripts, other types and anything oversized at upload time, and `GSTrailRegistry.load_index()` refuses an index naming a file with a different extension, so a pack cannot smuggle code through this addon. Images are loaded with `Image.load_from_buffer`, never as resources.
 
 ## Upload validation (pure)
 
@@ -45,7 +45,7 @@ All defs and images of a server ship as a single dot-cloud pack (`trails/<hash>`
 
 `GSTrailEmitter` (Node3D) resolves a `GSNodeRef` to the player node and samples its global position each physics tick. A point is added once the target moved `trail_min_step`; points older than `lifetime` are dropped; the count is capped (`trail_max_points`). The ribbon is an `ImmediateMesh` rebuilt per frame only when it changed, and not at all when `DisplayServer` is headless (the point list is still kept, so tests and servers see the same data). Distance culling and a global on/off cvar (`trail_enabled`) are for low-end clients.
 
-## Store integration contract (built, website-city branch `task/dot-trail-store`)
+## Store integration contract (built, website-city branch `task/gs-trail-store`)
 
 The TMC backend owns prices, purchases and entitlements. `GSTrailBackendHttp` follows these routes; every path and the player query parameter is a field, set from `trail.yml` keys `trail_{catalog,equipped,purchase,uploads,server_catalog,entitlements}_path` and `trail_player_param` through `apply_config`.
 
@@ -54,7 +54,7 @@ The TMC backend owns prices, purchases and entitlements. `GSTrailBackendHttp` fo
 3. Refusals reach the UI through `GSTrailBackend.explain`: `insufficient_points` and "Need N more Points", `not_entitled`, `pending_moderation`, `already_owned`, `unauthorized`.
 4. `uploads_path` (`POST`, player token) queues an image for moderation; the site re-runs the checks of `GSTrailUpload.validate` (PNG or WebP by magic bytes, 256 KB, 512 px, nothing after the image). The route is still ours to confirm with the site.
 
-5. Operators publish trails from dot-workbench; website-city stores the metadata row (id, owner server, access, price, licence, author) and the image on the CDN. A trail priced above 0 is only listed when the owner passes the store review.
+5. Operators publish trails from gs-workbench; website-city stores the metadata row (id, owner server, access, price, licence, author) and the image on the CDN. A trail priced above 0 is only listed when the owner passes the store review.
 6. Preview: the store page loads the trail image from `preview_url` and renders the ribbon with the same maths (`GSTrailRibbon.strip(points, ages, width, lifetime)` is deterministic and has no node dependency, so a web preview is a small JS port or the web build running `GSTrailEmitter` on a scripted path).
 7. The server never trusts a client's claim of ownership; only item 2 counts. A request the cached list would refuse first refetches it (`GSTrailEnvelope.serve`'s `refresh_fn`), so a trail bought a moment ago can be worn at once.
 
@@ -62,18 +62,18 @@ The TMC backend owns prices, purchases and entitlements. `GSTrailBackendHttp` fo
 
 ![A runner with two trails, rendered by tools/screenshot.sh](trail-shot.png)
 
-The store directory is the pack source (`GSTrailStore`), the workbench routes write it (`GSTrailWorkbench`), `GSTrailPack.build` or `publish_pack.sh` turns it into one pack, the server advertises `sv_trail_pack`, and dot-game's `GSGamePrejoin.extra_steps` fetches it before the join. The equipped id travels in `GSTrailMessage`, checked by `GSTrailRelay` through `GSTrailEquip`.
+The store directory is the pack source (`GSTrailStore`), the workbench routes write it (`GSTrailWorkbench`), `GSTrailPack.build` or `publish_pack.sh` turns it into one pack, the server advertises `sv_trail_pack`, and gs-game's `GSGamePrejoin.extra_steps` fetches it before the join. The equipped id travels in `GSTrailMessage`, checked by `GSTrailRelay` through `GSTrailEquip`.
 
 ## Phase 3 (built): the store in the game
 
 ![The Trails page in the game menu, stub store](trail-store.png)
 
-`GSTrailMenu.add_to(menu, setup)` puts a Trails page into dot-menu: a grid of every trail with a live ribbon preview (`GSTrailPreview`, the same strip maths flattened to the screen), its price, and Buy, Equip or Take off; members-only trails show their group. Below it the upload form (`GSTrailUploadPanel`) picks an image (`GSTrailFilePick`: a FileDialog on desktop, the browser's file input through `GSWeb` on the web), validates it with `GSTrailUpload.validate`, previews it and submits it for review. The store is a `GSTrailBackend`: `GSTrailBackendHttp` for the site (HTTPRequest through `GSHttp`, so it runs in a browser), `GSTrailBackendStub` for tests and offline play (it saves to `user://` and calls `GSWeb.sync_filesystem()`).
+`GSTrailMenu.add_to(menu, setup)` puts a Trails page into gs-menu: a grid of every trail with a live ribbon preview (`GSTrailPreview`, the same strip maths flattened to the screen), its price, and Buy, Equip or Take off; members-only trails show their group. Below it the upload form (`GSTrailUploadPanel`) picks an image (`GSTrailFilePick`: a FileDialog on desktop, the browser's file input through `GSWeb` on the web), validates it with `GSTrailUpload.validate`, previews it and submits it for review. The store is a `GSTrailBackend`: `GSTrailBackendHttp` for the site (HTTPRequest through `GSHttp`, so it runs in a browser), `GSTrailBackendStub` for tests and offline play (it saves to `user://` and calls `GSWeb.sync_filesystem()`).
 
-Wear requests travel on a dot-server envelope kind, `dot.trail` (`GSTrailEnvelope`), so a game needs no netcode change: the server registers it with `serve(server, relay, refresh_fn)`, a client with `attach(link, client)` before the link connects. dot-server-deploy installs both halves (`TmcTrail` on the host, `TmcTrailLink` in the shell), and dot-game's `GSGameClientAvatars.figure_of` (API 34) tells the client where each player's figure is.
+Wear requests travel on a gs-server envelope kind, `gs.trail` (`GSTrailEnvelope`), so a game needs no netcode change: the server registers it with `serve(server, relay, refresh_fn)`, a client with `attach(link, client)` before the link connects. gs-server-deploy installs both halves (`TmcTrail` on the host, `TmcTrailLink` in the shell), and gs-game's `GSGameClientAvatars.figure_of` (API 34) tells the client where each player's figure is.
 
 `tools/screenshot_ui.sh <prefix>` renders the page and the upload form; `examples/ui_selftest.tscn` checks the transport, the stub store, the screen, and good and bad uploads.
 
 ## Not built here
 
-Credits as a currency, and a browser file picker shared in dot-core rather than this addon's own (`GSTrailFilePick` is dialog plus browser input plus validation hooks, too large to move in a pin change). Each is a follow-up on the nightly board.
+Credits as a currency, and a browser file picker shared in gs-core rather than this addon's own (`GSTrailFilePick` is dialog plus browser input plus validation hooks, too large to move in a pin change). Each is a follow-up on the nightly board.

@@ -6,14 +6,14 @@ extends RefCounted
 const CHANNEL := "trail"
 ## The server rule advertising its trail pack as "<content id>@<version>".
 const PACK_CVAR := "sv_trail_pack"
-## dot-server's GSConVar.FLAG_NOTIFY (notify cvars are the query rules), copied so this file parses without dot-server; net_selftest checks the two agree.
+## gs-server's GSConVar.FLAG_NOTIFY (notify cvars are the query rules), copied so this file parses without gs-server; net_selftest checks the two agree.
 const NOTIFY_FLAG := 1 << 3
-const EMITTER_SCRIPT := "res://addons/dot_trail/dot_trail_emitter.gd"
-const EMITTER_META := &"dot_trail_emitter"
+const EMITTER_SCRIPT := "res://addons/gs_trail/gs_trail_emitter.gd"
+const EMITTER_META := &"gs_trail_emitter"
 
 signal changed(actor: int, id: String)
 
-## A dot-trail GSTrailRegistry, filled by the pack (see [method fetch_pack]).
+## A gs-trail GSTrailRegistry, filled by the pack (see [method fetch_pack]).
 var registry: Object
 ## func(actor: int) -> Node3D: the figure to follow, or null when it is not in the scene yet.
 var node_for: Callable = Callable()
@@ -74,7 +74,7 @@ static func pack_rule(content_id: String, version: String) -> String:
 	return "%s@%s" % [content_id, version]
 
 
-## The server half: registers [constant PACK_CVAR] on a dot-server console registry (duck-typed, `cvar(name, value, description, flags)`) as a notify cvar, so the query rules carry it to a joining client. Success holds the GSConVar; set its value again after publishing a new pack version. An empty [member GSTrailConfig.pack] registers nothing and succeeds with null.
+## The server half: registers [constant PACK_CVAR] on a gs-server console registry (duck-typed, `cvar(name, value, description, flags)`) as a notify cvar, so the query rules carry it to a joining client. Success holds the GSConVar; set its value again after publishing a new pack version. An empty [member GSTrailConfig.pack] registers nothing and succeeds with null.
 static func advertise(console: Object, config: GSTrailConfig) -> GSResult:
 	if config == null:
 		return GSResult.fail(GSError.CODE_INVALID, "trail advertise: no config")
@@ -97,9 +97,9 @@ func fetch_pack(cloud: Object, rules: Dictionary) -> GSResult:
 	var pack := pack_from_rules(rules)
 	if pack.is_empty():
 		return GSResult.success(0)
-	var pack_script := load("res://addons/dot_trail/dot_trail_pack.gd") as GDScript
+	var pack_script := load("res://addons/gs_trail/gs_trail_pack.gd") as GDScript
 	if pack_script == null or registry == null:
-		return GSResult.fail(GSError.CODE_UNSUPPORTED, "dot-trail is not linked")
+		return GSResult.fail(GSError.CODE_UNSUPPORTED, "gs-trail is not linked")
 	var res: GSResult = await pack_script.call(&"fetch", cloud, pack[0], pack[1], registry)
 	if res.ok:
 		refresh()

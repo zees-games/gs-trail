@@ -1,7 +1,7 @@
 class_name GSTrailConfig
 extends GSConfig
 
-## The trail cvars. Layered like every GSConfig: defaults, JSON file, environment (DOT_TRAIL_*), command line (--trail-*).
+## The trail cvars. Layered like every GSConfig: defaults, JSON file, environment (GS_TRAIL_*), command line (--trail-*).
 
 @export var enabled: bool = true
 ## Metres a wearer must move before a ribbon point is added.
@@ -28,7 +28,7 @@ extends GSConfig
 
 
 func env_prefix() -> String:
-	return "DOT_TRAIL_"
+	return "GS_TRAIL_"
 
 
 func cli_prefix() -> String:
@@ -58,7 +58,7 @@ func pack_parts() -> PackedStringArray:
 	return parse_pack(pack)
 
 
-## "<id>@<version>" as [id, version]; empty for anything else. The id is dot-cloud's (one slug or `<owner>/<name>`); dot-cloud checks both in full when it fetches.
+## "<id>@<version>" as [id, version]; empty for anything else. The id is gs-cloud's (one slug or `<owner>/<name>`); gs-cloud checks both in full when it fetches.
 static func parse_pack(text: String) -> PackedStringArray:
 	var parts := text.strip_edges().split("@")
 	if parts.size() != 2 or parts[0].contains(".."):

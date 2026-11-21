@@ -1,7 +1,7 @@
 class_name GSTrailWorkbench
 extends RefCounted
 
-## The trail form's server side: list, upload and delete a server's trails for owners and admins holding the `trail` flag. Built on dot-workbench's extension hooks ([method GSWorkbenchHttp.mount_extension], [method GSWorkbenchApi.add_flag]); dot-workbench knows nothing of trails. Everything is validated by [GSTrailStore]; the result is saved to the store directory, which is the pack source.
+## The trail form's server side: list, upload and delete a server's trails for owners and admins holding the `trail` flag. Built on gs-workbench's extension hooks ([method GSWorkbenchHttp.mount_extension], [method GSWorkbenchApi.add_flag]); gs-workbench knows nothing of trails. Everything is validated by [GSTrailStore]; the result is saved to the store directory, which is the pack source.
 
 const CHANNEL := "workbench.trails"
 const PREFIX := "/api/trails"

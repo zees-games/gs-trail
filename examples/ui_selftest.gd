@@ -1,6 +1,6 @@
 extends Node
 
-## The trails screen, its stub store, the upload form with random good and bad images, and the envelope transport, all headless. Needs dot-menu linked into addons/ for the kit (it falls back to plain controls without).
+## The trails screen, its stub store, the upload form with random good and bad images, and the envelope transport, all headless. Needs gs-menu linked into addons/ for the kit (it falls back to plain controls without).
 
 const SECTIONS := 6
 const CHECKS := 62
@@ -49,7 +49,7 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	_line("dot-trail ui self-test")
+	_line("gs-trail ui self-test")
 	_test_envelope()
 	await _test_store()
 	await _test_screen()

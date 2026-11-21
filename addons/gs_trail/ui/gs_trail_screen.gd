@@ -33,7 +33,7 @@ var _textures: Dictionary = {}
 var _busy := false
 
 
-## Builds the screen into [param parent] (a GSMenuPage body, or any container). [param kit] is dot-menu's kit or null.
+## Builds the screen into [param parent] (a GSMenuPage body, or any container). [param kit] is gs-menu's kit or null.
 static func make(parent: Control, p_registry: GSTrailRegistry, p_backend: GSTrailBackend, kit: Object = null, heading: bool = true) -> GSTrailScreen:
 	var s := GSTrailScreen.new()
 	s.name = "Trails"

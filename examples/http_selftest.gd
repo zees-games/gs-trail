@@ -44,7 +44,7 @@ func _backend(mock: MockHttp, token: String, key: String) -> GSTrailBackendHttp:
 
 
 func _run() -> void:
-	print("dot-trail http self-test")
+	print("gs-trail http self-test")
 	await _test_server()
 	await _test_player()
 	await _test_purchase_flow()

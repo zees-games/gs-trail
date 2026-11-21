@@ -1,15 +1,15 @@
 class_name GSTrailKit
 extends RefCounted
 
-## The menu kit's pieces with a plain fallback, so the trail screens use dot-menu's look when it is there and still draw without it.
+## The menu kit's pieces with a plain fallback, so the trail screens use gs-menu's look when it is there and still draw without it.
 
 var kit: Object = null
 
 
 func _init(p_kit: Object = null) -> void:
 	kit = p_kit
-	if kit == null and ResourceLoader.exists("res://addons/dot_menu/core/dot_menu_kit.gd"):
-		kit = (load("res://addons/dot_menu/core/dot_menu_kit.gd") as GDScript).new()
+	if kit == null and ResourceLoader.exists("res://addons/gs_menu/core/gs_menu_kit.gd"):
+		kit = (load("res://addons/gs_menu/core/gs_menu_kit.gd") as GDScript).new()
 
 
 func primary(text: String) -> Button:

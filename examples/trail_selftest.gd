@@ -1,6 +1,6 @@
 extends Node
 
-## Exercises dot-trail headless: defs, upload validation, registry and index, equip rules, ribbon maths, the emitter and config.
+## Exercises gs-trail headless: defs, upload validation, registry and index, equip rules, ribbon maths, the emitter and config.
 
 const SECTIONS := 8
 const CHECKS := 103
@@ -12,7 +12,7 @@ var _section_count := 0
 
 func _ready() -> void:
 	GSLog.set_level(GSLog.Level.FATAL)
-	_line("dot-trail self-test")
+	_line("gs-trail self-test")
 	_test_def()
 	_test_upload()
 	_test_registry()
@@ -247,7 +247,7 @@ func _test_config() -> void:
 		many.add(_def("t%d" % i), _png(8, 8))
 	_check(many.count() == 300, "max_trails 0 takes 300 trails (%d)" % many.count())
 	var cli := GSTrailConfig.new()
-	_check(cli.cli_prefix() == "--trail-" and cli.env_prefix() == "DOT_TRAIL_", "prefixes")
+	_check(cli.cli_prefix() == "--trail-" and cli.env_prefix() == "GS_TRAIL_", "prefixes")
 	_check(cli.limits()["max_dimension"] == 512, "limits feed the upload check")
 	_check(GSTrailConfig.parse_pack("trails-x@1.0.0") == PackedStringArray(["trails-x", "1.0.0"]) and GSTrailConfig.parse_pack("owner/name@2") == PackedStringArray(["owner/name", "2"]), "pack parses <id>@<version> and <owner>/<name>@<version>")
 	var bad := ["junk", "a@b@c", "../x@1", "a/b/c@1", "@1", "x@"].filter(func(t: String) -> bool: return not GSTrailConfig.parse_pack(t).is_empty())
@@ -260,7 +260,7 @@ func _test_config() -> void:
 
 func _test_store() -> void:
 	_section("store and pack")
-	var dir := OS.get_temp_dir().path_join("dot_trail_selftest_%d" % Time.get_ticks_usec())
+	var dir := OS.get_temp_dir().path_join("gs_trail_selftest_%d" % Time.get_ticks_usec())
 	var store := GSTrailStore.new(null, dir)
 	var meta := {"id": "flame", "title": "Flame", "licence": "CC0-1.0", "author": "Test", "url": "https://example.com/a", "access": "groups", "groups": ["donator"]}
 	var made := store.submit(meta, _png(16, 16), "x.png")
@@ -291,7 +291,7 @@ func _test_store() -> void:
 	var out := dir.path_join("out")
 	if ResourceLoader.exists(GSTrailPack.PUBLISHER_SCRIPT):
 		var built := GSTrailPack.build(store, "trails-test", out, {"version": "1.0.0"})
-		_check(built.ok and FileAccess.file_exists(out.path_join("manifest.json")), "the store builds ONE dot-cloud pack with a manifest")
+		_check(built.ok and FileAccess.file_exists(out.path_join("manifest.json")), "the store builds ONE gs-cloud pack with a manifest")
 		var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(out.path_join("manifest.json"))) if built.ok else {}
 		var paths: Array = (manifest.get("files", []) as Array).map(func(f: Dictionary) -> String: return f["path"])
 		_check(paths.has("trails.json") and paths.has("flame.png"), "the pack lists the index and the image")
@@ -299,9 +299,9 @@ func _test_store() -> void:
 		var staged := GSTrailStore.new(mounted).load_dir(out.path_join("_source"))
 		_check(staged.ok and mounted.count() == 1, "the delivered files load back into a registry")
 	else:
-		_check(true, "dot-cloud not linked: build skipped")
-		_check(true, "dot-cloud not linked: manifest check skipped")
-		_check(true, "dot-cloud not linked: load skipped")
+		_check(true, "gs-cloud not linked: build skipped")
+		_check(true, "gs-cloud not linked: manifest check skipped")
+		_check(true, "gs-cloud not linked: load skipped")
 	_check(GSTrailStore.new().save().code() == "invalid", "a store without a directory cannot save")
 
 

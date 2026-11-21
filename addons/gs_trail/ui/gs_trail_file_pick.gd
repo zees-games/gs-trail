@@ -64,7 +64,7 @@ func _open_web() -> void:
 	_js_input = doc.createElement("input")
 	_js_input.type = "file"
 	_js_input.accept = ".png,.webp,image/png,image/webp"
-	_js_input.onchange = GSWeb.create_callback("dot_trail_pick_change", _on_web_change)
+	_js_input.onchange = GSWeb.create_callback("gs_trail_pick_change", _on_web_change)
 	_js_input.click()
 
 
@@ -78,8 +78,8 @@ func _on_web_change(_args: Array) -> void:
 		failed.emit("%s is too large to read (%d bytes)." % [_js_name, int(file.size)])
 		return
 	_js_reader = GSWeb.bridge().call("create_object", "FileReader")
-	_js_reader.onload = GSWeb.create_callback("dot_trail_pick_load", _on_web_load)
-	_js_reader.onerror = GSWeb.create_callback("dot_trail_pick_error", func(_a: Array) -> void: failed.emit("The browser could not read %s." % _js_name))
+	_js_reader.onload = GSWeb.create_callback("gs_trail_pick_load", _on_web_load)
+	_js_reader.onerror = GSWeb.create_callback("gs_trail_pick_error", func(_a: Array) -> void: failed.emit("The browser could not read %s." % _js_name))
 	_js_reader.readAsDataURL(file)
 
 
@@ -87,7 +87,7 @@ func _on_web_load(_args: Array) -> void:
 	var url := str(_js_reader.result)
 	var comma := url.find(",")
 	var bytes := Marshalls.base64_to_raw(url.substr(comma + 1)) if comma >= 0 else PackedByteArray()
-	GSWeb.release_callback("dot_trail_pick_change")
-	GSWeb.release_callback("dot_trail_pick_load")
-	GSWeb.release_callback("dot_trail_pick_error")
+	GSWeb.release_callback("gs_trail_pick_change")
+	GSWeb.release_callback("gs_trail_pick_load")
+	GSWeb.release_callback("gs_trail_pick_error")
 	picked.emit(_js_name, bytes)

@@ -1,4 +1,4 @@
-![Trails banner](https://raw.githubusercontent.com/zees-games/dot-trail/main/docs/banner.png)
+![Trails banner](https://raw.githubusercontent.com/zees-games/gs-trail/main/docs/banner.png)
 
 Players equip a trail, an image ribbon that follows them as they move. Operators upload trails and choose who may wear them: everyone, or only some groups (donators, say). The server decides what a player may wear, and clients download every trail as one pack before joining. Design notes: [docs/design.md](docs/design.md).
 
@@ -7,7 +7,7 @@ Players equip a trail, an image ribbon that follows them as they move. Operators
 ## Install
 
 1. Get [Godot 4.7](https://godotengine.org/download).
-2. Either use [dot-bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_trail/` and its dependencies into your project and enable dot-trail in *Project > Project Settings > Plugins*.
+2. Either use [gs-bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/gs_trail/` and its dependencies into your project and enable gs-trail in *Project > Project Settings > Plugins*.
 
 ## Use
 
@@ -26,7 +26,7 @@ emitter.set_trail(trails.get_def(equip.worn(peer_id)))
 
 ## Settings
 
-`GSTrailConfig`, layered as file, then `DOT_TRAIL_*` environment, then `--trail-*` command line.
+`GSTrailConfig`, layered as file, then `GS_TRAIL_*` environment, then `--trail-*` command line.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -53,11 +53,11 @@ Import the project once, then run `trail_selftest.tscn`, `ui_selftest.tscn` and 
 | --- | --- |
 | Trail art | None shipped. Every trail carries a `credit` (author, licence and source URL), required by the upload form and shown in the store. |
 | Store page, ribbon previews, screenshots in `docs/` | Drawn by the addon's own code from generated noise and flat colours. No third-party image is bundled. |
-| Engine and addons | Godot Engine (MIT) and the dot-core, dot-game, dot-net, dot-menu, dot-ui and dot-cloud addons of this family. |
+| Engine and addons | Godot Engine (MIT) and the gs-core, gs-game, gs-net, gs-menu, gs-ui and gs-cloud addons of this family. |
 | Site routes | The TMC site's trail routes: `/api/app/v1/trails` for players and `/api/integration/v1/trails` for the game server. |
 
 ## Status and licence
 
-Part of the [**GameSpice**](https://gamespice.net) platform of Godot addons. Written with Claude Code and maintained by `gamemann`. Every addon has headless tests, but little of this has been played by real users yet, so expect rough edges and please [open an issue](https://github.com/zees-games/dot-trail/issues) when you hit one.
+Part of the [**GameSpice**](https://gamespice.net) platform of Godot addons. Written with Claude Code and maintained by `gamemann`. Every addon has headless tests, but little of this has been played by real users yet, so expect rough edges and please [open an issue](https://github.com/zees-games/gs-trail/issues) when you hit one.
 
 MIT licence, see [LICENSE](LICENSE). The only closed part of the [**GameSpice**](https://gamespice.net) platform is the web back end; you can use your own instead of GameSpice's.

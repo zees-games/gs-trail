@@ -1,11 +1,11 @@
 class_name GSTrailEnvelope
 extends RefCounted
 
-## Carries trails over a dot-server envelope kind instead of a game's GSNetManager, so a server host adds trails to any game without touching its netcode. Duck-typed on GSServer and GSClientLink: this addon does not require dot-server.
+## Carries trails over a gs-server envelope kind instead of a game's GSNetManager, so a server host adds trails to any game without touching its netcode. Duck-typed on GSServer and GSClientLink: this addon does not require gs-server.
 
 ## Up: {id}. Down: {actor, id}. Optional, so a peer without trails still plays.
-const KIND := &"dot.trail"
-## GSEnvelope.Lane.EVENT, copied so this file parses without dot-server.
+const KIND := &"gs.trail"
+## GSEnvelope.Lane.EVENT, copied so this file parses without gs-server.
 const LANE_EVENT := 2
 
 

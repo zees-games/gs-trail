@@ -1,6 +1,6 @@
 extends Node
 
-## Exercises the trail form's server side ([GSTrailWorkbench]) and its HTTP routes. Needs dot-workbench linked into addons/.
+## Exercises the trail form's server side ([GSTrailWorkbench]) and its HTTP routes. Needs gs-workbench linked into addons/.
 
 const SECTIONS := 3
 const CHECKS := 26
@@ -13,7 +13,7 @@ var _section_count := 0
 
 func _ready() -> void:
 	GSLog.set_level(GSLog.Level.FATAL)
-	_line("dot-trail workbench self-test")
+	_line("gs-trail workbench self-test")
 	_test_ops()
 	_test_http()
 	_test_permission()

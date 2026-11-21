@@ -1,10 +1,10 @@
 class_name GSTrailRelay
 extends RefCounted
 
-## The server half of player trails: runs a client's equip request through dot-trail's GSTrailEquip (access rule, cooldown) and tells every peer the id now worn. A refused request is answered with the id still worn, so the client's view reverts. The server's record is the only truth.
+## The server half of player trails: runs a client's equip request through gs-trail's GSTrailEquip (access rule, cooldown) and tells every peer the id now worn. A refused request is answered with the id still worn, so the client's view reverts. The server's record is the only truth.
 
 const CHANNEL := "trail"
-const NET_META := &"dot_trail_relay"
+const NET_META := &"gs_trail_relay"
 
 ## The server-side record of who wears what.
 var equip: GSTrailEquip

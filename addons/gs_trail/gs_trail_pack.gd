@@ -1,10 +1,10 @@
 class_name GSTrailPack
 extends RefCounted
 
-## One dot-cloud pack for all of a server's trails: build it from a store, fetch and mount it before join. dot-cloud is reached by path and duck typing, so this addon does not depend on it.
+## One gs-cloud pack for all of a server's trails: build it from a store, fetch and mount it before join. gs-cloud is reached by path and duck typing, so this addon does not depend on it.
 
 const CHANNEL := "trail"
-const PUBLISHER_SCRIPT := "res://addons/dot_cloud/publish/dot_cloud_publisher.gd"
+const PUBLISHER_SCRIPT := "res://addons/gs_cloud/publish/gs_cloud_publisher.gd"
 const PACK_PREFIX := "trails-"
 
 
@@ -22,7 +22,7 @@ static func build(store: GSTrailStore, content_id: String, out_dir: String, opts
 	if store.registry.count() == 0:
 		return GSResult.fail(GSError.CODE_INVALID, "no trails to publish")
 	if not ResourceLoader.exists(PUBLISHER_SCRIPT):
-		return GSResult.fail(GSError.CODE_UNSUPPORTED, "dot-cloud is not linked; use tools/publish_pack.sh on the store directory instead")
+		return GSResult.fail(GSError.CODE_UNSUPPORTED, "gs-cloud is not linked; use tools/publish_pack.sh on the store directory instead")
 	var staging := out_dir.path_join("_source")
 	var saved := store.save(staging)
 	if not saved.ok:
@@ -41,7 +41,7 @@ static func build(store: GSTrailStore, content_id: String, out_dir: String, opts
 ## The client side of join: ensures the pack through a GSCloudClient (duck-typed), then loads the mounted trails.json into [param registry]. A failure is a result, so the caller joins without trails.
 static func fetch(client: Object, content_id: String, version: String, registry: GSTrailRegistry) -> GSResult:
 	if client == null or not client.has_method(&"ensure"):
-		return GSResult.fail(GSError.CODE_INVALID, "no dot-cloud client")
+		return GSResult.fail(GSError.CODE_INVALID, "no gs-cloud client")
 	var res: GSResult = await client.call(&"ensure", StringName(content_id), version)
 	if not res.ok:
 		return res.wrap("fetching the trail pack " + content_id)

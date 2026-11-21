@@ -1,13 +1,13 @@
 class_name GSTrailMenu
 extends RefCounted
 
-## Puts a Trails page into a dot-menu GSMenu (duck-typed: add_page), drawn fresh each time it opens. dot-menu is reached by path, so this file parses without it.
+## Puts a Trails page into a gs-menu GSMenu (duck-typed: add_page), drawn fresh each time it opens. gs-menu is reached by path, so this file parses without it.
 
 const PAGE_ID := &"trails"
-const PAGE_SCRIPT := "res://addons/dot_menu/core/dot_menu_page.gd"
+const PAGE_SCRIPT := "res://addons/gs_menu/core/gs_menu_page.gd"
 
 
-## [param setup] is `func(screen: GSTrailScreen) -> void`: the caller calls bind, sets request_fn and worn_fn, and calls refresh. Returns the page, or null without dot-menu.
+## [param setup] is `func(screen: GSTrailScreen) -> void`: the caller calls bind, sets request_fn and worn_fn, and calls refresh. Returns the page, or null without gs-menu.
 static func add_to(menu: Object, setup: Callable, before: StringName = &"") -> Object:
 	if menu == null or not menu.has_method(&"add_page") or not ResourceLoader.exists(PAGE_SCRIPT):
 		return null

@@ -5,7 +5,7 @@ extends RefCounted
 
 const CHANNEL := "trail"
 const LICENCE_FILE := "licence.json"
-## The licences the site accepts for CDN content (dot-cloud docs/cdn-publish.md).
+## The licences the site accepts for CDN content (gs-cloud docs/cdn-publish.md).
 const LICENCES := ["CC0-1.0", "MIT", "Unlicense", "public-domain", "CC-BY-3.0", "CC-BY-4.0"]
 
 var registry: GSTrailRegistry
@@ -88,7 +88,7 @@ func load_dir(from: String = "") -> GSResult:
 
 ## The pack's licence.json: one entry per image, so the site's licence gate covers every file.
 func licence_json() -> String:
-	var entries: Array = [{"paths": [GSTrailRegistry.INDEX_FILE, LICENCE_FILE], "licence": "CC0-1.0", "author": "dot-trail", "url": "https://github.com/zees-games/dot-trail"}]
+	var entries: Array = [{"paths": [GSTrailRegistry.INDEX_FILE, LICENCE_FILE], "licence": "CC0-1.0", "author": "gs-trail", "url": "https://github.com/zees-games/gs-trail"}]
 	for id in registry.ids():
 		var d := registry.get_def(id)
 		entries.append({"paths": [d.image], "licence": d.licence, "author": d.author, "url": d.url})

@@ -1,6 +1,6 @@
 extends Node
 
-## Player trails over dot-net: the relay checks a request with GSTrailEquip and tells everyone, a refused request is answered with the id still worn, a late joiner hears who wears what, the client draws one emitter per wearer, and the pre-join hook fetches the pack. Needs dot-trail linked into addons/.
+## Player trails over gs-net: the relay checks a request with GSTrailEquip and tells everyone, a refused request is answered with the id still worn, a late joiner hears who wears what, the client draws one emitter per wearer, and the pre-join hook fetches the pack. Needs gs-trail linked into addons/.
 
 const CHECKS := 24
 
@@ -171,7 +171,7 @@ func _test_prejoin() -> void:
 
 
 func _run() -> void:
-	print("dot-trail: net")
+	print("gs-trail: net")
 	var registry := GSTrailRegistry.new()
 	registry.config.equip_cooldown = 0.0
 	for spec: Array in [["spark", "public", []], ["gold", "groups", ["donator"]]]:
