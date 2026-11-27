@@ -1,0 +1,10 @@
+# Runtime scripts checked by gs-ci scripts/check-gd-perf.py (tools/gd_perf_lint.py).
+# One fnmatch glob per line over tracked paths. Baseline: ci/efficiency/gd-perf.tsv.
+addons/gs_trail/client/gs_trail_client.gd
+addons/gs_trail/gs_trail_emitter.gd
+addons/gs_trail/gs_trail_equip.gd
+addons/gs_trail/gs_trail_ribbon.gd
+addons/gs_trail/net/gs_trail_envelope.gd
+addons/gs_trail/net/gs_trail_message.gd
+addons/gs_trail/net/gs_trail_relay.gd
+cold+: ^(_ready|_init|_enter_tree|_exit_tree|setup|configure|advertise|apply_missing|fetch_pack|pack_rule|request|equip|unequip|from_dict|to_dict|_material|describe|_on_.*)$

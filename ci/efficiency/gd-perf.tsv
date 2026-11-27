@@ -1,0 +1,26 @@
+# gd-perf
+# Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
+addons/gs_trail/client/gs_trail_client.gd::<members>::untyped_array	1
+addons/gs_trail/client/gs_trail_client.gd::_apply::dynamic_call	4
+addons/gs_trail/client/gs_trail_client.gd::fetch_pack::untyped_array	1
+addons/gs_trail/client/gs_trail_client.gd::pack_from_rules::untyped_array	1
+addons/gs_trail/gs_trail_equip.gd::<members>::untyped_array	2
+addons/gs_trail/gs_trail_ribbon.gd::strip::alloc	2
+addons/gs_trail/gs_trail_ribbon.gd::strip::untyped_array	1
+addons/gs_trail/net/gs_trail_envelope.gd::_id::untyped_array	1
+addons/gs_trail/net/gs_trail_envelope.gd::serve::alloc	2
+addons/gs_trail/net/gs_trail_envelope.gd::serve::dynamic_call	1
+addons/gs_trail/net/gs_trail_envelope.gd::serve::untyped_array	1
+addons/gs_trail/net/gs_trail_relay.gd::<members>::untyped_array	1
+addons/gs_trail/net/gs_trail_relay.gd::_entitlements::dynamic_call	1
+addons/gs_trail/net/gs_trail_relay.gd::_groups::dynamic_call	1
+addons/gs_trail/net/gs_trail_relay.gd::_send::alloc	1
+addons/gs_trail/net/gs_trail_relay.gd::_send::dynamic_call	1
+addons/gs_trail/net/gs_trail_relay.gd::add_peer::dynamic_call	1
+addons/gs_trail/net/gs_trail_relay.gd::allows::dynamic_call	1
+addons/gs_trail/net/gs_trail_relay.gd::peers::untyped_array	1
+addons/gs_trail/net/gs_trail_relay.gd::receive::alloc	1
+addons/gs_trail/net/gs_trail_relay.gd::receive::dynamic_call	2
+addons/gs_trail/net/gs_trail_relay.gd::remove_peer::dynamic_call	1
+addons/gs_trail/net/gs_trail_relay.gd::revalidate::dynamic_call	1
+addons/gs_trail/net/gs_trail_relay.gd::serve::dynamic_call	2
