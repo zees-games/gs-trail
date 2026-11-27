@@ -2,6 +2,8 @@
 
 Players equip a trail, an image ribbon that follows them as they move. Operators upload trails and choose who may wear them: everyone, or only some groups (donators, say). The server decides what a player may wear, and clients download every trail as one pack before joining. Design notes: [docs/design.md](docs/design.md).
 
+GameSpice addon, MIT, built with Claude Code. `trail_selftest.tscn`, `ui_selftest.tscn` and `http_selftest.tscn` in `examples/` run headless. The games in [Zee's Games](https://zeesgames.com) are built on GameSpice addons and run on live servers; this addon is not in any of them yet. Bug reports go to the [issue tracker](https://github.com/zees-games/gs-trail/issues).
+
 **Licensing: this addon provides upload and display only. It ships no art; whoever uploads an image is responsible for having the right to distribute it.**
 
 ## Install
@@ -47,6 +49,12 @@ These are limits you can change, and like other GameSpice settings 0 means unlim
 
 Import the project once, then run `trail_selftest.tscn`, `ui_selftest.tscn` and `http_selftest.tscn` (the site routes against a mocked HTTP layer) in `examples/` headless with Godot.
 
+## Used by
+
+No shipped game uses it yet; the example scene shows it.
+
+The whole collection is at [zeesgames.com](https://zeesgames.com).
+
 ## Credits
 
 | Item | Source |
@@ -56,8 +64,6 @@ Import the project once, then run `trail_selftest.tscn`, `ui_selftest.tscn` and 
 | Engine and addons | Godot Engine (MIT) and the gs-core, gs-game, gs-net, gs-menu, gs-ui and gs-cloud addons of this family. |
 | Site routes | The TMC site's trail routes: `/api/app/v1/trails` for players and `/api/integration/v1/trails` for the game server. |
 
-## Status and licence
-
-Part of the [**GameSpice**](https://gamespice.net) platform of Godot addons. Written with Claude Code and maintained by `gamemann`. Every addon has headless tests, but little of this has been played by real users yet, so expect rough edges and please [open an issue](https://github.com/zees-games/gs-trail/issues) when you hit one.
+## Licence
 
 MIT licence, see [LICENSE](LICENSE). The only closed part of the [**GameSpice**](https://gamespice.net) platform is the web back end; you can use your own instead of GameSpice's.
